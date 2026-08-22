@@ -1,0 +1,14 @@
+# Python
+biodb-backend/venv/
+biodb-backend/__pycache__/
+biodb-backend/**/__pycache__/
+*.pyc
+biodb-backend/.env
+
+# Node
+biodb-frontend/node_modules/
+biodb-frontend/dist/
+biodb-frontend/.env
+
+# OS
+.DS_Store
