@@ -5,6 +5,8 @@ from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
 
+from database_apis import db_connector
+
 load_dotenv()
 
 app = FastAPI(title="Unified Bioinformatics Database")
@@ -80,32 +82,61 @@ async def list_databases():
 
 @app.post("/search")
 async def search_databases(query: SearchQuery):
-    """Search across databases (stub results for Week 1 — real APIs land in Week 2)"""
+    """Search across live bioinformatics databases"""
     try:
         results = []
 
         if query.database == "proteins":
             results = [
                 {
-                    "id": "1abc",
-                    "name": "Insulin",
-                    "database": "PDB",
-                    "description": "Human insulin protein structure",
-                    "link": "https://www.rcsb.org/structure/1abc",
+                    "id": r["id"],
+                    "name": r["name"],
+                    "database": "UniProt",
+                    "description": r["description"],
+                    "link": r["link"],
                 }
+                for r in db_connector.search_uniprot_protein(query.query)
             ]
+            results.extend(
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "database": "PDB",
+                    "description": r["description"],
+                    "link": r["link"],
+                }
+                for r in db_connector.search_pdb_protein(query.query)
+            )
+
         elif query.database == "genomics":
             results = [
                 {
-                    "id": "BRCA1",
-                    "name": "BRCA1 Gene",
-                    "database": "NCBI",
-                    "description": "Breast cancer susceptibility protein 1",
-                    "link": "https://www.ncbi.nlm.nih.gov/gene/",
+                    "id": r["id"],
+                    "name": r["name"],
+                    "database": "NCBI Gene",
+                    "description": r["description"],
+                    "link": r["link"],
                 }
+                for r in db_connector.search_ncbi_gene(query.query)
             ]
 
-        return {"query": query.query, "database": query.database, "results": results}
+        elif query.database == "pathways":
+            results = [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "database": "KEGG",
+                    "description": r["description"],
+                    "link": r["link"],
+                }
+                for r in db_connector.search_kegg_pathway(query.query)
+            ]
+
+        return {
+            "query": query.query,
+            "database": query.database,
+            "results": results[: query.limit],
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
