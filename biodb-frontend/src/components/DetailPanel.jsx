@@ -46,7 +46,9 @@ export function DetailPanel({ result, open, onOpenChange }) {
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount aria-describedby={undefined}>
               <motion.div
-                className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+                className={`fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 ${
+                  isPdb ? 'max-w-2xl' : 'max-w-md'
+                }`}
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
@@ -71,8 +73,8 @@ export function DetailPanel({ result, open, onOpenChange }) {
                     <div className="mb-5 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
                       <iframe
                         title={`3D structure ${result.id}`}
-                        src={`https://molstar.org/viewer/?pdb=${result.id}`}
-                        className="h-72 w-full"
+                        src={`https://molstar.org/viewer/?pdb=${result.id}&hide-controls=1&collapse-left-panel=1`}
+                        className="h-96 w-full"
                         loading="lazy"
                       />
                     </div>
