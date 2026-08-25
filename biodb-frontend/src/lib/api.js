@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -26,5 +26,14 @@ export function useSearch(database, query, limit = 10) {
     enabled: Boolean(database && query && query.trim().length > 1),
     staleTime: 60_000,
     retry: 1,
+  })
+}
+
+export function useChat() {
+  return useMutation({
+    mutationFn: async (query) => {
+      const { data } = await client.post('/chat', { query })
+      return data
+    },
   })
 }

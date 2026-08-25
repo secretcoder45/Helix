@@ -1,5 +1,6 @@
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
 import { iconFor } from '../lib/databaseMeta'
 import { useEffect } from 'react'
 
@@ -38,6 +39,19 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
           <Command.Empty className="p-4 text-center text-sm text-slate-400">
             No matches.
           </Command.Empty>
+
+          <Command.Group heading="" className="px-2 py-1">
+            <Command.Item
+              onSelect={() => {
+                navigate('/chat')
+                setOpen(false)
+              }}
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm data-[selected=true]:bg-slate-100 dark:data-[selected=true]:bg-slate-800"
+            >
+              <Sparkles size={16} className="text-indigo-400" />
+              Ask the Assistant
+            </Command.Item>
+          </Command.Group>
 
           <Command.Group heading="Databases" className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
             {Object.entries(databases).map(([key, db]) => {

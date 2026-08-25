@@ -5,7 +5,28 @@ from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
 
+import re
+
 from database_apis import db_connector
+from llm_service import llm
+
+# Stripped from natural-language chat questions before hitting database search
+# APIs, which expect keyword-like queries (e.g. "insulin"), not full sentences
+# (e.g. "what does insulin do in the human body?" returns zero UniProt hits).
+_STOPWORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "do", "does", "did",
+    "what", "how", "why", "when", "where", "who", "which", "whom",
+    "in", "of", "to", "for", "on", "at", "by", "and", "or", "about",
+    "tell", "me", "please", "can", "you", "explain", "describe",
+    "it", "its", "this", "that", "these", "those",
+}
+
+
+def _extract_search_terms(query: str) -> str:
+    """Reduce a natural-language question to keyword-like terms for search APIs."""
+    words = re.findall(r"[a-zA-Z0-9-]+", query.lower())
+    keywords = [w for w in words if w not in _STOPWORDS]
+    return " ".join(keywords[:5]) if keywords else query
 
 load_dotenv()
 
@@ -80,58 +101,64 @@ async def list_databases():
     return databases
 
 
+def _run_search(database: str, query: str) -> List[Dict]:
+    """Search one database category. Shared by /search and /chat."""
+    results = []
+
+    if database == "proteins":
+        results = [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "database": "UniProt",
+                "description": r["description"],
+                "link": r["link"],
+            }
+            for r in db_connector.search_uniprot_protein(query)
+        ]
+        results.extend(
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "database": "PDB",
+                "description": r["description"],
+                "link": r["link"],
+            }
+            for r in db_connector.search_pdb_protein(query)
+        )
+
+    elif database == "genomics":
+        results = [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "database": "NCBI Gene",
+                "description": r["description"],
+                "link": r["link"],
+            }
+            for r in db_connector.search_ncbi_gene(query)
+        ]
+
+    elif database == "pathways":
+        results = [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "database": "KEGG",
+                "description": r["description"],
+                "link": r["link"],
+            }
+            for r in db_connector.search_kegg_pathway(query)
+        ]
+
+    return results
+
+
 @app.post("/search")
 async def search_databases(query: SearchQuery):
     """Search across live bioinformatics databases"""
     try:
-        results = []
-
-        if query.database == "proteins":
-            results = [
-                {
-                    "id": r["id"],
-                    "name": r["name"],
-                    "database": "UniProt",
-                    "description": r["description"],
-                    "link": r["link"],
-                }
-                for r in db_connector.search_uniprot_protein(query.query)
-            ]
-            results.extend(
-                {
-                    "id": r["id"],
-                    "name": r["name"],
-                    "database": "PDB",
-                    "description": r["description"],
-                    "link": r["link"],
-                }
-                for r in db_connector.search_pdb_protein(query.query)
-            )
-
-        elif query.database == "genomics":
-            results = [
-                {
-                    "id": r["id"],
-                    "name": r["name"],
-                    "database": "NCBI Gene",
-                    "description": r["description"],
-                    "link": r["link"],
-                }
-                for r in db_connector.search_ncbi_gene(query.query)
-            ]
-
-        elif query.database == "pathways":
-            results = [
-                {
-                    "id": r["id"],
-                    "name": r["name"],
-                    "database": "KEGG",
-                    "description": r["description"],
-                    "link": r["link"],
-                }
-                for r in db_connector.search_kegg_pathway(query.query)
-            ]
-
+        results = _run_search(query.database, query.query)
         return {
             "query": query.query,
             "database": query.database,
@@ -144,11 +171,25 @@ async def search_databases(query: SearchQuery):
 
 @app.post("/chat")
 async def chat(message: ChatMessage):
-    """Chat with LLM about bioinformatics data (LLM wiring lands in Week 3)"""
-    return {
-        "query": message.query,
-        "response": "LLM integration coming soon",
-    }
+    """Chat with the LLM about bioinformatics, grounded in live database results."""
+    try:
+        # Pull a few results from each category so the LLM has real data to
+        # ground its answer in, regardless of what kind of question it is.
+        search_terms = _extract_search_terms(message.query)
+        search_results = []
+        for database in ("proteins", "genomics", "pathways"):
+            search_results.extend(_run_search(database, search_terms)[:3])
+
+        response = llm.answer_query(message.query, search_results)
+
+        return {
+            "query": message.query,
+            "response": response,
+            "sources": [r["link"] for r in search_results[:5]],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

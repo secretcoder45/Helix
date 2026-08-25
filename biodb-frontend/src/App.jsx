@@ -5,6 +5,7 @@ import { useDarkMode } from './hooks/useDarkMode'
 import { Sidebar } from './components/Sidebar'
 import { CommandPalette } from './components/CommandPalette'
 import { SearchPage } from './pages/SearchPage'
+import { ChatPage } from './pages/ChatPage'
 
 const RECENT_KEY = 'biodb-recent-searches'
 
@@ -52,6 +53,7 @@ function App() {
       <main className="flex-1 overflow-hidden">
         <Routes>
           <Route path="/" element={<SearchPage databases={databases} />} />
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/:database" element={<SearchPage databases={databases} />} />
         </Routes>
       </main>

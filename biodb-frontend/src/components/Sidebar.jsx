@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Moon, Sun, Command } from 'lucide-react'
+import { Moon, Sun, Command, Sparkles } from 'lucide-react'
 import { iconFor, colorFor } from '../lib/databaseMeta'
 import { ACCENT } from '../lib/colorClasses'
 
@@ -25,6 +25,20 @@ export function Sidebar({ databases, dark, setDark, onOpenPalette }) {
       </button>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+        <NavLink
+          to="/chat"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+            }`
+          }
+        >
+          <Sparkles size={17} />
+          Assistant
+        </NavLink>
+        <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
         {Object.entries(databases).map(([key, db]) => {
           const Icon = iconFor(key)
           const accent = ACCENT[colorFor(key)]
