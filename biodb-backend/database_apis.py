@@ -319,6 +319,50 @@ class DatabaseConnector:
             return []
 
     @staticmethod
+    @cached("sequence")
+    def fetch_sequence(accession: str) -> Dict:
+        """
+        Fetch one sequence directly by UniProt accession.
+
+        Distinct from resolve_entity, which *searches*. Here the identifier is
+        already known (it came from a BLAST hit or a saved project item), so
+        this hits the accession endpoint directly — one small request instead
+        of a search plus ranking.
+        """
+        try:
+            response = requests.get(
+                f"https://rest.uniprot.org/uniprotkb/{accession}.json",
+                params={"fields": "accession,id,protein_name,organism_name,sequence"},
+                timeout=10,
+            )
+            # UniProt answers 400 (not 404) for an accession that doesn't
+            # exist, so treat any non-200 as "not found" rather than checking
+            # for a specific status.
+            if response.status_code != 200:
+                return {}
+
+            entry = response.json()
+            sequence = entry.get("sequence", {})
+            if not sequence.get("value"):
+                return {}
+
+            return {
+                "accession": entry.get("primaryAccession", accession),
+                "name": entry.get("uniProtkbId", accession),
+                "protein_name": entry.get("proteinDescription", {})
+                .get("recommendedName", {})
+                .get("fullName", {})
+                .get("value", ""),
+                "organism": entry.get("organism", {}).get("scientificName", ""),
+                "sequence": sequence.get("value", ""),
+                "length": sequence.get("length"),
+                "retrieved_at": _now_iso(),
+            }
+        except Exception as e:
+            print(f"Sequence fetch error: {e}")
+            return {}
+
+    @staticmethod
     @cached("entity")
     def resolve_entity(query: str) -> Dict:
         """

@@ -10,6 +10,7 @@ from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
 
+import json
 import re
 
 from database_apis import db_connector
@@ -134,6 +135,23 @@ class AlignRequest(BaseModel):
     gap_extend: float = -0.5
     match_score: float = 5.0
     mismatch_score: float = -4.0
+
+
+class SavedAlignmentCreate(BaseModel):
+    algorithm: str
+    label1: str = "Sequence 1"
+    label2: str = "Sequence 2"
+    seq1: str
+    seq2: str
+    aligned_seq1: str
+    aligned_seq2: str
+    score: float
+    identity_pct: float = 0.0
+    similarity_pct: float = 0.0
+    gaps: int = 0
+    length: int = 0
+    params: Dict = {}
+    notes: str = ""
 
 
 # ---- Routes ----
@@ -487,6 +505,46 @@ def align_needleman_wunsch(payload: AlignRequest):
     return result
 
 
+@app.post("/align/smith-waterman")
+def align_smith_waterman(payload: AlignRequest):
+    if payload.sequence_type not in _VALID_SEQ_TYPES:
+        raise HTTPException(
+            status_code=400, detail=f"sequence_type must be one of {sorted(_VALID_SEQ_TYPES)}"
+        )
+    try:
+        result = alignment_service.smith_waterman(
+            payload.seq1,
+            payload.seq2,
+            sequence_type=payload.sequence_type,
+            matrix=payload.matrix,
+            gap_open=payload.gap_open,
+            gap_extend=payload.gap_extend,
+            match_score=payload.match_score,
+            mismatch_score=payload.mismatch_score,
+        )
+    except alignment_service.AlignmentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
+
+
+@app.get("/sequence/{accession}")
+def get_sequence(accession: str):
+    """
+    Fetch a single sequence by UniProt accession.
+
+    Exists so sequences can travel between tools: a BLAST hit or a saved
+    project item carries an accession but not the sequence itself, and
+    without this the only way to align one would be to copy it out of
+    UniProt by hand — which is exactly the manual step this app is supposed
+    to remove.
+    """
+    seq = db_connector.fetch_sequence(accession)
+    if not seq:
+        raise HTTPException(status_code=404, detail=f"No sequence found for '{accession}'")
+    return seq
+
+
 # ---- BLAST ----
 # Sequence similarity search against NCBI's real, live databases. Async by
 # nature (NCBI takes real time to search nr/swissprot), so this is three
@@ -673,6 +731,84 @@ async def remove_item(project_id: str, item_id: str, session: Session = Depends(
     return {"deleted": item_id}
 
 
+@app.post("/projects/{project_id}/alignments")
+async def add_alignment(
+    project_id: str,
+    payload: SavedAlignmentCreate,
+    session: Session = Depends(db_module.get_db),
+):
+    """Save an alignment result into a project."""
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    alignment = models.SavedAlignment(
+        project_id=project_id,
+        algorithm=payload.algorithm,
+        label1=payload.label1,
+        label2=payload.label2,
+        seq1=payload.seq1,
+        seq2=payload.seq2,
+        aligned_seq1=payload.aligned_seq1,
+        aligned_seq2=payload.aligned_seq2,
+        score=payload.score,
+        identity_pct=payload.identity_pct,
+        similarity_pct=payload.similarity_pct,
+        gaps=payload.gaps,
+        length=payload.length,
+        params=json.dumps(payload.params),
+        notes=payload.notes,
+    )
+    session.add(alignment)
+    session.commit()
+    session.refresh(alignment)
+    return _serialize_alignment(alignment)
+
+
+@app.delete("/projects/{project_id}/alignments/{alignment_id}")
+async def remove_alignment(
+    project_id: str, alignment_id: str, session: Session = Depends(db_module.get_db)
+):
+    alignment = (
+        session.query(models.SavedAlignment)
+        .filter(
+            models.SavedAlignment.id == alignment_id,
+            models.SavedAlignment.project_id == project_id,
+        )
+        .first()
+    )
+    if not alignment:
+        raise HTTPException(status_code=404, detail="Alignment not found")
+    session.delete(alignment)
+    session.commit()
+    return {"deleted": alignment_id}
+
+
+def _serialize_alignment(a: models.SavedAlignment) -> dict:
+    try:
+        params = json.loads(a.params or "{}")
+    except ValueError:
+        params = {}
+    return {
+        "id": a.id,
+        "algorithm": a.algorithm,
+        "label1": a.label1,
+        "label2": a.label2,
+        "seq1": a.seq1,
+        "seq2": a.seq2,
+        "aligned_seq1": a.aligned_seq1,
+        "aligned_seq2": a.aligned_seq2,
+        "score": a.score,
+        "identity_pct": a.identity_pct,
+        "similarity_pct": a.similarity_pct,
+        "gaps": a.gaps,
+        "length": a.length,
+        "params": params,
+        "notes": a.notes,
+        "created_at": a.created_at.isoformat() if a.created_at else None,
+    }
+
+
 def _serialize_item(item: models.SavedItem) -> dict:
     return {
         "id": item.id,
@@ -694,9 +830,11 @@ def _serialize_project(project: models.Project, include_items: bool = False) -> 
         "description": project.description,
         "created_at": project.created_at.isoformat() if project.created_at else None,
         "item_count": len(project.items),
+        "alignment_count": len(project.alignments),
     }
     if include_items:
         data["items"] = [_serialize_item(i) for i in project.items]
+        data["alignments"] = [_serialize_alignment(a) for a in project.alignments]
     return data
 
 

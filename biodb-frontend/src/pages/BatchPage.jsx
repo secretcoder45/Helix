@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useBatch } from '../lib/api'
 import { SaveSelectionToProject } from '../components/SaveSelectionToProject'
+import { AddToTrayButton } from '../components/SequenceTrayUI'
 import { exportBatchCsv, exportBatchFasta } from '../lib/export'
 import { Button, Card, EmptyState, PageHeader, Scroller, SourceBadge } from '../components/ui'
 
@@ -81,7 +82,7 @@ function ResultsTable({ rows, selected, onToggle, onToggleAll }) {
                 aria-label="Select all resolved rows"
               />
             </th>
-            {['Query', 'Accession', 'Protein', 'Organism', 'Length', 'Mass', 'Structures'].map(
+            {['Query', 'Accession', 'Protein', 'Organism', 'Length', 'Mass', 'Structures', ''].map(
               (h) => (
                 <th
                   key={h}
@@ -138,9 +139,24 @@ function ResultsTable({ rows, selected, onToggle, onToggleAll }) {
                   <td className="tnum whitespace-nowrap px-3 py-2 text-ink-2">
                     {r.structure_count}
                   </td>
+                  <td className="px-3 py-2">
+                    {r.sequence && (
+                      <AddToTrayButton
+                        size="xs"
+                        entry={{
+                          id: r.accession,
+                          label: r.name || r.accession,
+                          sublabel: r.protein_name,
+                          sequence: r.sequence,
+                          type: 'protein',
+                          source: 'UniProt',
+                        }}
+                      />
+                    )}
+                  </td>
                 </>
               ) : (
-                <td colSpan={6} className="px-3 py-2 text-warn">
+                <td colSpan={7} className="px-3 py-2 text-warn">
                   No match{r.error ? ` — ${r.error}` : ''}
                 </td>
               )}

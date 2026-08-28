@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Float, Integer
 from sqlalchemy.orm import relationship
 
 from db import Base
@@ -27,6 +27,9 @@ class Project(Base):
     created_at = Column(DateTime(timezone=True), default=_now)
 
     items = relationship("SavedItem", back_populates="project", cascade="all, delete-orphan")
+    alignments = relationship(
+        "SavedAlignment", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class SavedItem(Base):
@@ -50,3 +53,44 @@ class SavedItem(Base):
     saved_at = Column(DateTime(timezone=True), default=_now)
 
     project = relationship("Project", back_populates="items")
+
+
+class SavedAlignment(Base):
+    """
+    An alignment saved into a project.
+
+    Projects previously held only external database records; this makes them
+    hold analyses too, so a project becomes the full record of a piece of
+    work rather than just a bookmark list. Inputs are stored alongside the
+    result so an alignment stays reproducible — the parameters that produced
+    it are as much part of the finding as the score.
+    """
+
+    __tablename__ = "saved_alignments"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False)
+
+    algorithm = Column(String, nullable=False)  # "needleman-wunsch" | "smith-waterman"
+    label1 = Column(String, default="Sequence 1")
+    label2 = Column(String, default="Sequence 2")
+
+    seq1 = Column(Text, nullable=False)
+    seq2 = Column(Text, nullable=False)
+    aligned_seq1 = Column(Text, nullable=False)
+    aligned_seq2 = Column(Text, nullable=False)
+
+    score = Column(Float, nullable=False)
+    identity_pct = Column(Float, default=0.0)
+    similarity_pct = Column(Float, default=0.0)
+    gaps = Column(Integer, default=0)
+    length = Column(Integer, default=0)
+
+    # The scoring parameters, JSON-encoded — without these the score is not
+    # reproducible or comparable against another alignment.
+    params = Column(Text, default="{}")
+    notes = Column(Text, default="")
+
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    project = relationship("Project", back_populates="alignments")

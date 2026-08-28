@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useBlastSubmit, useBlastStatus, useBlastResults } from '../lib/api'
 import { SaveSelectionToProject } from '../components/SaveSelectionToProject'
+import { AddToTrayButton } from '../components/SequenceTrayUI'
 import { Button, Card, EmptyState, PageHeader, Scroller, SourceBadge } from '../components/ui'
 
 // Human insulin (P01308) — a recognisable query with obvious, checkable hits.
@@ -65,6 +66,8 @@ function HitsTable({ hits, selected, onToggle, onToggleAll, sort, onSort }) {
     { key: 'bit_score', label: 'Score', numeric: true },
     { key: 'length', label: 'Length', numeric: true },
   ]
+  // Trailing action column has no sort key
+  const actionColumn = true
 
   const allSelected = hits.length > 0 && hits.every((h) => selected.has(h.accession))
 
@@ -99,6 +102,7 @@ function HitsTable({ hits, selected, onToggle, onToggleAll, sort, onSort }) {
                 </button>
               </th>
             ))}
+            {actionColumn && <th className="w-16 px-3 py-2" />}
           </tr>
         </thead>
         <tbody>
@@ -139,6 +143,9 @@ function HitsTable({ hits, selected, onToggle, onToggleAll, sort, onSort }) {
               </td>
               <td className="tnum whitespace-nowrap px-3 py-2 text-ink-2">{h.bit_score}</td>
               <td className="tnum whitespace-nowrap px-3 py-2 text-ink-2">{h.length} aa</td>
+              <td className="px-3 py-2">
+                <AddToTrayButton size="xs" accession={h.accession} />
+              </td>
             </tr>
           ))}
         </tbody>

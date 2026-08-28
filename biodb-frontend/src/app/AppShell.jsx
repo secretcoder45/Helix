@@ -14,6 +14,7 @@ import {
   PanelLeft,
 } from 'lucide-react'
 import { Logo } from '../components/Logo'
+import { SequenceTrayPanel } from '../components/SequenceTrayUI'
 import { iconFor } from '../lib/databaseMeta'
 
 /**
@@ -145,7 +146,7 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
 
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-5">
+        <header className="relative flex h-14 shrink-0 items-center gap-3 border-b border-line bg-surface px-5">
           <button
             onClick={onOpenPalette}
             className="group flex h-9 w-full max-w-md items-center gap-2.5 rounded-lg border border-line bg-paper px-3 text-left transition-colors hover:border-line-strong"
@@ -156,6 +157,10 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             </span>
             <kbd>⌘K</kbd>
           </button>
+
+          <div className="ml-auto">
+            <SequenceTrayPanel />
+          </div>
         </header>
 
         <main className="flex min-h-0 flex-1 flex-col">{children}</main>

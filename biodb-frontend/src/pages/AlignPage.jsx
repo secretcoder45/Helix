@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { GitCompareArrows, Play, Copy, Check, ChevronDown, AlertTriangle } from 'lucide-react'
+import { GitCompareArrows, Play, Copy, Check, ChevronDown, AlertTriangle, FlaskConical } from 'lucide-react'
 import { useAlign } from '../lib/api'
+import { SaveAlignmentToProject } from '../components/SaveAlignmentToProject'
 import { Button, Card, EmptyState, PageHeader, Scroller } from '../components/ui'
 
 const SAMPLE_1 = 'MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN'
@@ -144,6 +145,10 @@ function AdvancedOptions({ open, setOpen, opts, setOpts, sequenceType }) {
 export function AlignPage() {
   const [seq1, setSeq1] = useState('')
   const [seq2, setSeq2] = useState('')
+  const [label1, setLabel1] = useState('Sequence 1')
+  const [label2, setLabel2] = useState('Sequence 2')
+  const [algorithm, setAlgorithm] = useState('needleman-wunsch')
+  const [fromTray, setFromTray] = useState(false)
   const [sequenceType, setSequenceType] = useState('protein')
   const [showOptions, setShowOptions] = useState(false)
   const [opts, setOpts] = useState({
@@ -156,10 +161,32 @@ export function AlignPage() {
 
   const align = useAlign()
 
+  // Sequences handed off from the tray arrive via sessionStorage rather than
+  // the URL — a 1000-residue sequence would blow past practical URL limits.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('helix-align-handoff')
+      if (!raw) return
+      const picked = JSON.parse(raw)
+      if (Array.isArray(picked) && picked.length === 2) {
+        setSeq1(picked[0].sequence)
+        setSeq2(picked[1].sequence)
+        setLabel1(picked[0].label)
+        setLabel2(picked[1].label)
+        setSequenceType(picked[0].type || 'protein')
+        setFromTray(true)
+      }
+      sessionStorage.removeItem('helix-align-handoff')
+    } catch {
+      /* no handoff, or unreadable — fall back to empty inputs */
+    }
+  }, [])
+
   const run = (e) => {
     e.preventDefault()
     if (!seq1.trim() || !seq2.trim()) return
     align.mutate({
+      algorithm,
       seq1: seq1.replace(/\s/g, ''),
       seq2: seq2.replace(/\s/g, ''),
       sequence_type: sequenceType,
@@ -173,19 +200,54 @@ export function AlignPage() {
     <>
       <PageHeader
         eyebrow="Pairwise alignment"
-        title="Needleman-Wunsch"
-        description="Global sequence alignment, computed locally — no external queue, no wait. Cross-validated against Biopython's reference implementation."
+        title={algorithm === 'needleman-wunsch' ? 'Needleman-Wunsch' : 'Smith-Waterman'}
+        description={
+          algorithm === 'needleman-wunsch'
+            ? 'Global alignment — best end-to-end correspondence between two sequences. Computed locally, cross-validated against Biopython.'
+            : 'Local alignment — the single best-matching region, ignoring unrelated flanks. Computed locally, cross-validated against Biopython.'
+        }
+        actions={
+          result && (
+            <SaveAlignmentToProject
+              alignment={{
+                algorithm,
+                label1,
+                label2,
+                seq1: seq1.replace(/\s/g, ''),
+                seq2: seq2.replace(/\s/g, ''),
+                aligned_seq1: result.aligned_seq1,
+                aligned_seq2: result.aligned_seq2,
+                score: result.score,
+                identity_pct: result.identity_pct,
+                similarity_pct: result.similarity_pct,
+                gaps: result.gaps,
+                length: result.length,
+                params: { sequence_type: sequenceType, ...opts },
+              }}
+            />
+          )
+        }
       />
 
       <Scroller className="px-8 py-6">
         <div className="mx-auto max-w-4xl space-y-4">
+          {fromTray && (
+            <div className="flex items-center gap-2 rounded-lg border border-accent-line bg-accent-soft px-3 py-2 text-[12px] text-ink">
+              <FlaskConical size={13} className="shrink-0 text-accent" />
+              Loaded {label1} and {label2} from the sequence tray.
+            </div>
+          )}
+
           <Card className="overflow-hidden">
             <form onSubmit={run}>
               <div className="grid gap-px bg-line sm:grid-cols-2">
                 <div className="bg-surface">
-                  <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-3">
-                    Sequence 1
-                  </p>
+                  <input
+                    value={label1}
+                    onChange={(e) => setLabel1(e.target.value)}
+                    className="w-full bg-transparent px-4 pt-3 text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-3 outline-none focus:text-accent"
+                    aria-label="Label for sequence 1"
+                  />
                   <textarea
                     value={seq1}
                     onChange={(e) => setSeq1(e.target.value)}
@@ -196,9 +258,12 @@ export function AlignPage() {
                   />
                 </div>
                 <div className="bg-surface">
-                  <p className="px-4 pt-3 text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-3">
-                    Sequence 2
-                  </p>
+                  <input
+                    value={label2}
+                    onChange={(e) => setLabel2(e.target.value)}
+                    className="w-full bg-transparent px-4 pt-3 text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-3 outline-none focus:text-accent"
+                    aria-label="Label for sequence 2"
+                  />
                   <textarea
                     value={seq2}
                     onChange={(e) => setSeq2(e.target.value)}
@@ -211,7 +276,26 @@ export function AlignPage() {
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface-2/40 px-4 py-2.5">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex overflow-hidden rounded-lg border border-line">
+                    {[
+                      ['needleman-wunsch', 'Global'],
+                      ['smith-waterman', 'Local'],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setAlgorithm(value)}
+                        className={`px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          algorithm === value
+                            ? 'bg-accent text-accent-contrast'
+                            : 'bg-surface text-ink-2 hover:text-ink'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <select
                     value={sequenceType}
                     onChange={(e) => setSequenceType(e.target.value)}
@@ -293,7 +377,14 @@ export function AlignPage() {
 
                 <div className="flex items-center justify-between px-4 pt-3">
                   <p className="text-[11px] text-ink-3">
-                    Identity/similarity computed over aligned (non-gap) positions.
+                    {result.seq1_start !== undefined ? (
+                      <>
+                        Aligned region: {label1} {result.seq1_start}–{result.seq1_end} vs {label2}{' '}
+                        {result.seq2_start}–{result.seq2_end}
+                      </>
+                    ) : (
+                      'Identity/similarity computed over aligned (non-gap) positions.'
+                    )}
                   </p>
                   <CopyButton
                     text={`>seq1\n${result.aligned_seq1}\n>seq2\n${result.aligned_seq2}\n`}

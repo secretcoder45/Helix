@@ -17,6 +17,7 @@ import {
 import { useEntity, useLiterature } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
+import { AddToTrayButton } from '../components/SequenceTrayUI'
 import {
   Card,
   CardHeader,
@@ -70,13 +71,25 @@ function SequenceCard({ entity }) {
         title="Sequence"
         icon={Dna}
         action={
-          <button
-            onClick={() => copy(fasta)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
-          >
-            {copied ? <Check size={11} className="text-ok" /> : <Copy size={11} />}
-            {copied ? 'Copied' : 'FASTA'}
-          </button>
+          <div className="flex items-center gap-1.5">
+            <AddToTrayButton
+              entry={{
+                id: entity.accession,
+                label: entity.name,
+                sublabel: entity.protein_name,
+                sequence: seq.value,
+                type: 'protein',
+                source: 'UniProt',
+              }}
+            />
+            <button
+              onClick={() => copy(fasta)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
+            >
+              {copied ? <Check size={11} className="text-ok" /> : <Copy size={11} />}
+              {copied ? 'Copied' : 'FASTA'}
+            </button>
+          </div>
         }
       />
       <div className="grid grid-cols-2 gap-4 border-b border-line px-4 py-3 sm:grid-cols-3">

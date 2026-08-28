@@ -10,6 +10,7 @@ import {
   FileText,
   Braces,
   Table,
+  GitCompareArrows,
 } from 'lucide-react'
 import {
   useProjects,
@@ -17,6 +18,7 @@ import {
   useCreateProject,
   useDeleteProject,
   useRemoveItem,
+  useRemoveAlignment,
 } from '../lib/api'
 import { exportCsv, exportCitations, exportJson } from '../lib/export'
 import {
@@ -72,6 +74,56 @@ function ExportMenu({ projectName, items }) {
   )
 }
 
+function AlignmentRows({ projectId, alignments }) {
+  const removeAlignment = useRemoveAlignment()
+  if (!alignments?.length) return null
+
+  return (
+    <>
+      <div className="flex items-center gap-2 border-t border-line bg-surface-2/40 px-4 py-2">
+        <GitCompareArrows size={12} className="text-ink-3" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+          Alignments
+        </span>
+        <span className="tnum text-[11px] text-ink-3">{alignments.length}</span>
+      </div>
+      <ul className="divide-y divide-line">
+        {alignments.map((a) => (
+          <li
+            key={a.id}
+            className="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface-2/40"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="truncate font-mono text-[12px] font-medium text-ink">
+                  {a.label1} vs {a.label2}
+                </span>
+                <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-ink-3">
+                  {a.algorithm === 'smith-waterman' ? 'Local' : 'Global'}
+                </span>
+              </div>
+              <p className="tnum mt-1 text-[11px] text-ink-2">
+                score {a.score} · {a.identity_pct}% identity · {a.gaps} gaps · {a.length} cols
+              </p>
+              {a.params?.matrix && (
+                <p className="mt-0.5 font-mono text-[10px] text-ink-3">
+                  {a.params.matrix}, gap {a.params.gap_open}/{a.params.gap_extend}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => removeAlignment.mutate({ projectId, alignmentId: a.id })}
+              className="shrink-0 rounded-md p-1.5 text-ink-3 opacity-0 transition-all hover:bg-danger-soft hover:text-danger group-hover:opacity-100 focus:opacity-100"
+            >
+              <Trash2 size={13} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
 function ProjectItems({ projectId }) {
   const { data: project, isLoading } = useProject(projectId)
   const removeItem = useRemoveItem()
@@ -90,15 +142,16 @@ function ProjectItems({ projectId }) {
       <div className="flex items-center justify-between bg-surface-2/40 px-4 py-2">
         <span className="tnum text-[11px] text-ink-3">
           {project.items.length} {project.items.length === 1 ? 'record' : 'records'}
+          {project.alignments?.length ? ` · ${project.alignments.length} alignments` : ''}
         </span>
         <ExportMenu projectName={project.name} items={project.items} />
       </div>
 
-      {project.items.length === 0 ? (
+      {project.items.length === 0 && !project.alignments?.length ? (
         <p className="px-4 py-6 text-center text-[12px] text-ink-3">
-          Nothing saved yet. Cross-reference a gene and use Save.
+          Nothing saved yet. Cross-reference a gene, or run an alignment, and use Save.
         </p>
-      ) : (
+      ) : project.items.length === 0 ? null : (
         <ul className="divide-y divide-line">
           {project.items.map((item) => (
             <li
@@ -143,6 +196,8 @@ function ProjectItems({ projectId }) {
           ))}
         </ul>
       )}
+
+      <AlignmentRows projectId={projectId} alignments={project.alignments} />
     </div>
   )
 }
@@ -228,7 +283,7 @@ export function ProjectsPage() {
                             {p.name}
                           </span>
                           <span className="tnum shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-ink-3">
-                            {p.item_count}
+                            {p.item_count + (p.alignment_count || 0)}
                           </span>
                         </button>
                         <button

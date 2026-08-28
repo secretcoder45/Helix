@@ -295,3 +295,76 @@ def test_literature_empty_for_nonsense_gene(client):
     res = client.get("/literature/notarealgene12345xyz")
     assert res.status_code == 200
     assert res.json()["papers"] == []
+
+
+def test_alignment_saves_into_project_with_reproducible_params(client):
+    project = client.post("/projects", json={"name": "With alignment"}).json()
+    params = {"matrix": "BLOSUM62", "gap_open": -10, "gap_extend": -0.5}
+
+    saved = client.post(
+        f"/projects/{project['id']}/alignments",
+        json={
+            "algorithm": "smith-waterman",
+            "label1": "INS_HUMAN",
+            "label2": "INS_PIG",
+            "seq1": "HEAGAWGHEE",
+            "seq2": "PAWHEAE",
+            "aligned_seq1": "AWGHE",
+            "aligned_seq2": "AW-HE",
+            "score": 18.0,
+            "identity_pct": 100.0,
+            "gaps": 1,
+            "length": 5,
+            "params": params,
+        },
+    ).json()
+
+    assert saved["algorithm"] == "smith-waterman"
+    # Params must survive the JSON round trip — without them the score isn't
+    # reproducible or comparable against another alignment.
+    assert saved["params"] == params
+
+    fetched = client.get(f"/projects/{project['id']}").json()
+    assert fetched["alignment_count"] == 1
+    assert fetched["alignments"][0]["params"] == params
+
+    # Deleting the project cascades to its alignments
+    client.delete(f"/projects/{project['id']}")
+    assert client.get(f"/projects/{project['id']}").status_code == 404
+
+
+def test_projects_report_both_items_and_alignments(client):
+    project = client.post("/projects", json={"name": "Mixed"}).json()
+    client.post(
+        f"/projects/{project['id']}/items",
+        json={"external_id": "P01308", "name": "INS_HUMAN", "database": "UniProt"},
+    )
+    client.post(
+        f"/projects/{project['id']}/alignments",
+        json={
+            "algorithm": "needleman-wunsch",
+            "seq1": "AAAA",
+            "seq2": "AAA",
+            "aligned_seq1": "AAAA",
+            "aligned_seq2": "AAA-",
+            "score": 2.0,
+        },
+    )
+    fetched = client.get(f"/projects/{project['id']}").json()
+    assert fetched["item_count"] == 1
+    assert fetched["alignment_count"] == 1
+
+
+def test_alignment_404s_for_missing_project(client):
+    res = client.post(
+        "/projects/nope/alignments",
+        json={
+            "algorithm": "needleman-wunsch",
+            "seq1": "A",
+            "seq2": "A",
+            "aligned_seq1": "A",
+            "aligned_seq2": "A",
+            "score": 4.0,
+        },
+    )
+    assert res.status_code == 404

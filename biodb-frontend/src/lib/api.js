@@ -121,9 +121,37 @@ export function useBlastResults(rid, ready) {
 
 export function useAlign() {
   return useMutation({
-    mutationFn: async (payload) => {
-      const { data } = await client.post('/align/needleman-wunsch', payload)
+    mutationFn: async ({ algorithm = 'needleman-wunsch', ...payload }) => {
+      const { data } = await client.post(`/align/${algorithm}`, payload)
       return data
+    },
+  })
+}
+
+export function useSaveAlignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, alignment }) => {
+      const { data } = await client.post(`/projects/${projectId}/alignments`, alignment)
+      return data
+    },
+    onSuccess: (_d, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+  })
+}
+
+export function useRemoveAlignment() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, alignmentId }) => {
+      const { data } = await client.delete(`/projects/${projectId}/alignments/${alignmentId}`)
+      return data
+    },
+    onSuccess: (_d, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
     },
   })
 }

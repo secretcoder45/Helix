@@ -179,3 +179,146 @@ def needleman_wunsch(
         "similarity_pct": round(100 * similar / aligned_positions, 1) if aligned_positions else 0.0,
         "gaps": a1.count("-") + a2.count("-"),
     }
+
+
+def smith_waterman(
+    seq1: str,
+    seq2: str,
+    sequence_type: SequenceType = "protein",
+    matrix: str = "BLOSUM62",
+    gap_open: float = -10.0,
+    gap_extend: float = -0.5,
+    match_score: float = 5.0,
+    mismatch_score: float = -4.0,
+) -> Dict:
+    """
+    Local alignment via the Smith-Waterman variant of Gotoh's algorithm.
+
+    Differs from Needleman-Wunsch in two ways that matter biologically:
+    the match matrix floors at zero (so a bad stretch restarts the alignment
+    rather than dragging the score down), and traceback starts from the
+    highest-scoring cell anywhere in the matrix and stops at the first zero.
+    The result is the single best-matching *region* between two sequences
+    rather than a forced end-to-end correspondence — which is what you want
+    when comparing, say, a shared domain between two otherwise-unrelated
+    proteins.
+
+    Also returns where the aligned region sits in each input, since with a
+    local alignment "which part matched" is half the answer.
+    """
+    seq1, seq2 = seq1.upper().strip(), seq2.upper().strip()
+
+    if not seq1 or not seq2:
+        raise AlignmentError("Both sequences must be non-empty")
+    if len(seq1) > MAX_SEQUENCE_LENGTH or len(seq2) > MAX_SEQUENCE_LENGTH:
+        raise AlignmentError(f"Sequences must be {MAX_SEQUENCE_LENGTH} residues or shorter")
+    if gap_open > 0 or gap_extend > 0:
+        raise AlignmentError("Gap penalties must be negative (or zero)")
+
+    score_fn = (
+        _dna_score_fn(match_score, mismatch_score)
+        if sequence_type == "dna"
+        else _protein_score_fn(matrix)
+    )
+
+    n, m = len(seq1), len(seq2)
+
+    M = [[0.0] * (m + 1) for _ in range(n + 1)]
+    Ix = [[NEG_INF] * (m + 1) for _ in range(n + 1)]
+    Iy = [[NEG_INF] * (m + 1) for _ in range(n + 1)]
+
+    best_score, best_i, best_j = 0.0, 0, 0
+
+    for i in range(1, n + 1):
+        a = seq1[i - 1]
+        for j in range(1, m + 1):
+            b = seq2[j - 1]
+            s = score_fn(a, b)
+            # The zero floor is what makes this local: a region that scores
+            # badly is abandoned and the alignment restarts here.
+            M[i][j] = max(0.0, M[i - 1][j - 1] + s, Ix[i - 1][j - 1] + s, Iy[i - 1][j - 1] + s)
+            Ix[i][j] = max(M[i - 1][j] + gap_open, Ix[i - 1][j] + gap_extend)
+            Iy[i][j] = max(M[i][j - 1] + gap_open, Iy[i][j - 1] + gap_extend)
+
+            if M[i][j] > best_score:
+                best_score, best_i, best_j = M[i][j], i, j
+
+    if best_score == 0.0:
+        # No positively-scoring region exists anywhere.
+        return {
+            "aligned_seq1": "",
+            "aligned_seq2": "",
+            "score": 0.0,
+            "length": 0,
+            "identity": 0,
+            "identity_pct": 0.0,
+            "similarity_pct": 0.0,
+            "gaps": 0,
+            "seq1_start": 0,
+            "seq1_end": 0,
+            "seq2_start": 0,
+            "seq2_end": 0,
+        }
+
+    aligned1, aligned2 = [], []
+    i, j, state = best_i, best_j, "M"
+
+    while i > 0 and j > 0:
+        if state == "M":
+            if M[i][j] == 0.0:
+                break
+            aligned1.append(seq1[i - 1])
+            aligned2.append(seq2[j - 1])
+            s = score_fn(seq1[i - 1], seq2[j - 1])
+            current = M[i][j]
+            i, j = i - 1, j - 1
+            # Which predecessor produced this cell?
+            if abs(current - (M[i][j] + s)) < 1e-9:
+                state = "M"
+            elif abs(current - (Ix[i][j] + s)) < 1e-9:
+                state = "Ix"
+            elif abs(current - (Iy[i][j] + s)) < 1e-9:
+                state = "Iy"
+            else:
+                break  # current == 0 restart point
+        elif state == "Ix":
+            aligned1.append(seq1[i - 1])
+            aligned2.append("-")
+            opened = M[i - 1][j] + gap_open
+            extended = Ix[i - 1][j] + gap_extend
+            state = "M" if opened >= extended else "Ix"
+            i -= 1
+        else:  # Iy
+            aligned1.append("-")
+            aligned2.append(seq2[j - 1])
+            opened = M[i][j - 1] + gap_open
+            extended = Iy[i][j - 1] + gap_extend
+            state = "M" if opened >= extended else "Iy"
+            j -= 1
+
+    aligned1.reverse()
+    aligned2.reverse()
+    a1, a2 = "".join(aligned1), "".join(aligned2)
+
+    matches = sum(1 for x, y in zip(a1, a2) if x == y and x != "-")
+    aligned_positions = sum(1 for x, y in zip(a1, a2) if x != "-" and y != "-")
+    similar = matches
+    if sequence_type == "protein":
+        sf = _protein_score_fn(matrix)
+        similar = sum(1 for x, y in zip(a1, a2) if x != "-" and y != "-" and sf(x, y) > 0)
+
+    return {
+        "aligned_seq1": a1,
+        "aligned_seq2": a2,
+        "score": round(best_score, 2),
+        "length": len(a1),
+        "identity": matches,
+        "identity_pct": round(100 * matches / aligned_positions, 1) if aligned_positions else 0.0,
+        "similarity_pct": round(100 * similar / aligned_positions, 1) if aligned_positions else 0.0,
+        "gaps": a1.count("-") + a2.count("-"),
+        # 1-based inclusive coordinates of the aligned region in each input
+        "seq1_start": i + 1,
+        "seq1_end": best_i,
+        "seq2_start": j + 1,
+        "seq2_end": best_j,
+    }
