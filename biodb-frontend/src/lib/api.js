@@ -63,6 +63,49 @@ export function useBatch() {
   })
 }
 
+// ---- BLAST ----
+// Three hooks mirroring the three-endpoint async flow: submit once, poll
+// status on an interval, fetch results once status says READY. Polling
+// backs off to reduce load on both NCBI and our own free-tier backend for a
+// search that can run minutes.
+
+export function useBlastSubmit() {
+  return useMutation({
+    mutationFn: async ({ sequence, program, database }) => {
+      const { data } = await client.post('/blast/submit', { sequence, program, database })
+      return data
+    },
+  })
+}
+
+const TERMINAL_STATUSES = new Set(['READY', 'FAILED', 'UNKNOWN'])
+
+export function useBlastStatus(rid) {
+  return useQuery({
+    queryKey: ['blast-status', rid],
+    queryFn: async () => {
+      const { data } = await client.get(`/blast/status/${rid}`)
+      return data
+    },
+    enabled: Boolean(rid),
+    refetchInterval: (query) =>
+      TERMINAL_STATUSES.has(query.state.data?.status) ? false : 8000,
+    retry: 2,
+  })
+}
+
+export function useBlastResults(rid, ready) {
+  return useQuery({
+    queryKey: ['blast-results', rid],
+    queryFn: async () => {
+      const { data } = await client.get(`/blast/results/${rid}`)
+      return data
+    },
+    enabled: Boolean(rid) && ready,
+    staleTime: Infinity, // a finished search's results never change
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

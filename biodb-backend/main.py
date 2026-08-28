@@ -14,6 +14,8 @@ import re
 
 from database_apis import db_connector
 from llm_service import llm
+import xml.etree.ElementTree as ET
+import blast_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -114,6 +116,12 @@ class SavedItemCreate(BaseModel):
 
 class BulkSavedItemsCreate(BaseModel):
     items: List[SavedItemCreate]
+
+
+class BlastSubmit(BaseModel):
+    sequence: str
+    program: str = "blastp"
+    database: str = "swissprot"
 
 
 # ---- Routes ----
@@ -416,6 +424,71 @@ def batch_lookup(payload: BatchRequest):
             "max_batch": MAX_BATCH,
         },
     }
+
+
+# ---- BLAST ----
+# Sequence similarity search against NCBI's real, live databases. Async by
+# nature (NCBI takes real time to search nr/swissprot), so this is three
+# endpoints rather than one: submit, poll, fetch — mirroring how the NCBI
+# API itself works instead of hiding the wait behind a single blocking call.
+
+_VALID_PROGRAMS = {"blastp", "blastn", "blastx"}
+_VALID_DATABASES = {"swissprot", "nr", "nt"}
+_PROTEIN_RE = re.compile(r"^[A-Za-z\*\-\s]+$")
+_MAX_SEQUENCE_LENGTH = 10_000
+
+
+def _clean_sequence(raw: str) -> str:
+    """Strip a FASTA header line and whitespace, if present, so pasting a
+    header-and-all FASTA record works the same as pasting a bare sequence."""
+    lines = [ln for ln in raw.strip().splitlines() if not ln.startswith(">")]
+    return "".join(ln.strip() for ln in lines)
+
+
+@app.post("/blast/submit")
+def blast_submit(payload: BlastSubmit):
+    if payload.program not in _VALID_PROGRAMS:
+        raise HTTPException(status_code=400, detail=f"program must be one of {sorted(_VALID_PROGRAMS)}")
+    if payload.database not in _VALID_DATABASES:
+        raise HTTPException(status_code=400, detail=f"database must be one of {sorted(_VALID_DATABASES)}")
+
+    sequence = _clean_sequence(payload.sequence)
+    if len(sequence) < 10:
+        raise HTTPException(status_code=400, detail="Sequence too short to search (minimum 10 residues)")
+    if len(sequence) > _MAX_SEQUENCE_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Sequence too long ({len(sequence)} chars, max {_MAX_SEQUENCE_LENGTH})",
+        )
+    if not _PROTEIN_RE.match(sequence):
+        raise HTTPException(status_code=400, detail="Sequence contains characters outside the standard alphabet")
+
+    try:
+        result = blast_service.submit_search(sequence, payload.program, payload.database)
+    except blast_service.BlastError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return result
+
+
+@app.get("/blast/status/{rid}")
+def blast_status(rid: str):
+    try:
+        status = blast_service.check_status(rid)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return {"rid": rid, "status": status}
+
+
+@app.get("/blast/results/{rid}")
+def blast_results(rid: str):
+    try:
+        hits = blast_service.fetch_results(rid)
+    except blast_service.BlastError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except ET.ParseError:
+        raise HTTPException(status_code=502, detail="NCBI returned a result that could not be parsed")
+    return {"rid": rid, "hits": hits}
 
 
 # ---- Projects (saved workspaces) ----

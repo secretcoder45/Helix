@@ -1,28 +1,11 @@
 """
 Tests for persistence + caching. These run against a throwaway SQLite file so
-they never touch the real biodb.sqlite3.
+they never touch the real biodb.sqlite3. The `client` fixture lives in
+conftest.py so it's shared with test_blast.py.
 """
 
-import os
-import tempfile
-
-# Point the app at a temp DB before importing anything that reads DATABASE_URL.
-_tmp_db = os.path.join(tempfile.mkdtemp(), "test.sqlite3")
-os.environ["DATABASE_URL"] = f"sqlite:///{_tmp_db}"
-
-import pytest  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-
-import main  # noqa: E402
-
-
-@pytest.fixture(scope="module")
-def client():
-    # The context-manager form runs the app's lifespan handler, which creates
-    # the tables. A bare TestClient(app) would skip it and every query would
-    # fail with "no such table".
-    with TestClient(main.app) as c:
-        yield c
+import pytest
+import main
 
 
 def test_health(client):
