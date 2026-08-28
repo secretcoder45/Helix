@@ -79,21 +79,13 @@ export function ChatPage() {
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
                     m.role === 'user'
-                      ? 'bg-indigo-500 text-sm text-white'
+                      ? 'bg-indigo-500 text-white'
                       : 'border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
                   }`}
                 >
-                  <div
-                    className={
-                      m.role === 'assistant'
-                        ? 'whitespace-pre-wrap font-serif text-[15px] leading-relaxed'
-                        : 'whitespace-pre-wrap text-sm'
-                    }
-                  >
-                    {m.content}
-                  </div>
+                  <div className="whitespace-pre-wrap">{m.content}</div>
                   {m.sources?.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-2 dark:border-slate-800">
                       {m.sources.map((src, idx) => (
