@@ -278,3 +278,20 @@ def test_bulk_save_404s_for_missing_project(client):
         json={"items": [{"external_id": "X", "name": "X", "database": "UniProt"}]},
     )
     assert res.status_code == 404
+
+
+@pytest.mark.network
+def test_literature_returns_relevant_papers_with_links(client):
+    res = client.get("/literature/BRCA1").json()
+    papers = res["papers"]
+    assert len(papers) > 0
+    first = papers[0]
+    assert first["pmid"].isdigit()
+    assert first["link"] == f"https://pubmed.ncbi.nlm.nih.gov/{first['pmid']}/"
+    assert "brca1" in first["title"].lower() or "brca" in first["title"].lower()
+
+
+def test_literature_empty_for_nonsense_gene(client):
+    res = client.get("/literature/notarealgene12345xyz")
+    assert res.status_code == 200
+    assert res.json()["papers"] == []

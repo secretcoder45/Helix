@@ -12,8 +12,9 @@ import {
   AlertCircle,
   Loader2,
   Link2,
+  BookOpen,
 } from 'lucide-react'
-import { useEntity } from '../lib/api'
+import { useEntity, useLiterature } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
 import {
@@ -86,6 +87,47 @@ function SequenceCard({ entity }) {
       <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-all px-4 py-3 font-mono text-[11px] leading-[1.7] text-ink-2">
         {seq.value}
       </pre>
+    </Card>
+  )
+}
+
+function LiteratureCard({ geneSymbol }) {
+  const { data: papers, isLoading } = useLiterature(geneSymbol)
+
+  if (!geneSymbol) return null
+
+  return (
+    <Card>
+      <CardHeader title="Literature" icon={BookOpen} count={papers?.length} subtitle="Related papers, via PubMed" />
+      {isLoading && (
+        <div className="space-y-2 p-4">
+          <Skeleton className="h-10" />
+          <Skeleton className="h-10" />
+        </div>
+      )}
+      {!isLoading && papers?.length === 0 && (
+        <p className="px-4 py-4 text-[12px] text-ink-3">No indexed papers found for this gene.</p>
+      )}
+      {papers?.length > 0 && (
+        <ul className="divide-y divide-line">
+          {papers.map((paper) => (
+            <li key={paper.pmid} className="px-4 py-3">
+              <a
+                href={paper.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[13px] font-medium leading-snug text-ink hover:text-accent"
+              >
+                {paper.title}
+              </a>
+              <p className="mt-1 text-[11px] text-ink-3">
+                {paper.authors} · <em className="not-italic">{paper.journal}</em>
+                {paper.year ? ` · ${paper.year}` : ''}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
     </Card>
   )
 }
@@ -326,6 +368,8 @@ export function EntityPage() {
                       </div>
                     </Card>
                   )}
+
+                  <LiteratureCard geneSymbol={entity.genes?.[0]} />
                 </div>
               </div>
 

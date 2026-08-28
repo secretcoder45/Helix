@@ -303,6 +303,24 @@ async def get_entity(query: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/literature/{gene_symbol}")
+async def get_literature(gene_symbol: str, limit: int = 5):
+    """
+    Related PubMed papers for a gene symbol.
+
+    Separate endpoint rather than folded into /entity: PubMed adds a second
+    NCBI round trip on top of the gene lookup /entity already does, and
+    researchers don't always want it — keeping it lazy means the entity page
+    renders as soon as the core cross-reference is back, with literature
+    filling in a beat later instead of blocking on it.
+    """
+    try:
+        papers = db_connector.search_pubmed(gene_symbol, limit=limit)
+        return {"gene_symbol": gene_symbol, "papers": papers}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---- Batch lookup ----
 # The single biggest time saver here: annotating a gene list one entry at a
 # time is a routine hours-long chore, and it's pure mechanical lookup.

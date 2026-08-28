@@ -51,6 +51,19 @@ export function useEntity(query) {
   })
 }
 
+export function useLiterature(geneSymbol) {
+  return useQuery({
+    queryKey: ['literature', geneSymbol],
+    queryFn: async () => {
+      const { data } = await client.get(`/literature/${encodeURIComponent(geneSymbol)}`)
+      return data.papers
+    },
+    enabled: Boolean(geneSymbol),
+    staleTime: 10 * 60_000,
+    retry: 1,
+  })
+}
+
 export function useBatch() {
   return useMutation({
     mutationFn: async ({ identifiers, includeGene }) => {

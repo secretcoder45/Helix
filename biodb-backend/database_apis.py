@@ -239,6 +239,84 @@ class DatabaseConnector:
             print(f"KEGG search error: {e}")
             return []
 
+    @staticmethod
+    @cached("pubmed")
+    def search_pubmed(gene_symbol: str, limit: int = 5) -> List[Dict]:
+        """
+        Related literature for a gene, via PubMed E-utilities.
+
+        Uses the same esearch -> esummary two-step as search_ncbi_gene, and
+        shares its rate limiter — this is the same NCBI API family with the
+        same 3/sec (10/sec with a key) limit.
+        """
+        try:
+            api_key = os.getenv("NCBI_API_KEY")
+
+            search_url = f"{DatabaseConnector.BASE_URLS['ncbi']}/esearch.fcgi"
+            search_params = {
+                "db": "pubmed",
+                "term": f"{gene_symbol}[Gene Name] AND human[Organism]",
+                "retmode": "json",
+                "retmax": limit,
+                "sort": "relevance",
+            }
+            if api_key:
+                search_params["api_key"] = api_key
+
+            _NCBI_LIMITER.acquire()
+            search_response = requests.get(search_url, params=search_params, timeout=10)
+            if search_response.status_code != 200:
+                return []
+
+            pmids = search_response.json().get("esearchresult", {}).get("idlist", [])
+            if not pmids:
+                return []
+
+            summary_url = f"{DatabaseConnector.BASE_URLS['ncbi']}/esummary.fcgi"
+            summary_params = {"db": "pubmed", "id": ",".join(pmids), "retmode": "json"}
+            if api_key:
+                summary_params["api_key"] = api_key
+
+            _NCBI_LIMITER.acquire()
+            summary_response = requests.get(summary_url, params=summary_params, timeout=10)
+            if summary_response.status_code != 200:
+                return []
+
+            result = summary_response.json().get("result", {})
+            papers = []
+            for pmid in result.get("uids", []):
+                article = result.get(pmid, {})
+                if not article:
+                    continue
+
+                authors = article.get("authors", [])
+                author_line = authors[0]["name"] if authors else "Unknown"
+                if len(authors) > 1:
+                    author_line += " et al."
+
+                doi = next(
+                    (a["value"] for a in article.get("articleids", []) if a.get("idtype") == "doi"),
+                    None,
+                )
+
+                papers.append(
+                    {
+                        "pmid": pmid,
+                        "title": article.get("title", "").rstrip("."),
+                        "authors": author_line,
+                        "journal": article.get("source", ""),
+                        "year": (article.get("pubdate") or "")[:4],
+                        "doi": doi,
+                        "link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+                        "retrieved_at": _now_iso(),
+                    }
+                )
+
+            return papers
+
+        except Exception as e:
+            print(f"PubMed search error: {e}")
+            return []
 
     @staticmethod
     @cached("entity")
