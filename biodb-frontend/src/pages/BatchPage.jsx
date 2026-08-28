@@ -12,6 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useBatch } from '../lib/api'
+import { SaveSelectionToProject } from '../components/SaveSelectionToProject'
 import { exportBatchCsv, exportBatchFasta } from '../lib/export'
 import { Button, Card, EmptyState, PageHeader, Scroller, SourceBadge } from '../components/ui'
 
@@ -61,12 +62,25 @@ function ExportMenu({ rows }) {
   )
 }
 
-function ResultsTable({ rows }) {
+function ResultsTable({ rows, selected, onToggle, onToggleAll }) {
+  const resolvedRows = rows.filter((r) => r.resolved)
+  const allSelected = resolvedRows.length > 0 && resolvedRows.every((r) => selected.has(r.accession))
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr className="border-b border-line text-left">
+            <th className="w-9 px-3 py-2">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={onToggleAll}
+                disabled={resolvedRows.length === 0}
+                className="h-3.5 w-3.5 accent-[var(--accent)]"
+                aria-label="Select all resolved rows"
+              />
+            </th>
             {['Query', 'Accession', 'Protein', 'Organism', 'Length', 'Mass', 'Structures'].map(
               (h) => (
                 <th
@@ -85,8 +99,19 @@ function ResultsTable({ rows }) {
               key={`${r.query}-${i}`}
               className={`border-b border-line transition-colors last:border-0 hover:bg-surface-2/50 ${
                 r.resolved ? '' : 'bg-warn-soft/40'
-              }`}
+              } ${r.resolved && selected.has(r.accession) ? 'bg-accent-soft/60' : ''}`}
             >
+              <td className="px-3 py-2">
+                {r.resolved && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(r.accession)}
+                    onChange={() => onToggle(r.accession)}
+                    className="h-3.5 w-3.5 accent-[var(--accent)]"
+                    aria-label={`Select ${r.query}`}
+                  />
+                )}
+              </td>
               <td className="whitespace-nowrap px-3 py-2 font-mono font-medium text-ink">
                 {r.query}
               </td>
@@ -130,6 +155,7 @@ function ResultsTable({ rows }) {
 export function BatchPage() {
   const [text, setText] = useState('')
   const [includeGene, setIncludeGene] = useState(false)
+  const [selected, setSelected] = useState(new Set())
   const batch = useBatch()
 
   const count = text.split(/[\s,;]+/).filter(Boolean).length
@@ -137,10 +163,40 @@ export function BatchPage() {
   const run = (e) => {
     e.preventDefault()
     if (!text.trim()) return
+    setSelected(new Set())
     batch.mutate({ identifiers: [text], includeGene })
   }
 
   const data = batch.data
+  const resolvedRows = data?.rows.filter((r) => r.resolved) ?? []
+
+  const toggleRow = (accession) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(accession) ? next.delete(accession) : next.add(accession)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    setSelected((prev) =>
+      prev.size === resolvedRows.length ? new Set() : new Set(resolvedRows.map((r) => r.accession)),
+    )
+  }
+
+  // Batch rows (accession/name/protein_name/link) don't match the saved-item
+  // shape (external_id/name/database/description/link) the projects API
+  // expects — map at the boundary rather than assuming the shapes align.
+  const selectedItems = resolvedRows
+    .filter((r) => selected.has(r.accession))
+    .map((r) => ({
+      external_id: r.accession,
+      name: r.name,
+      database: 'UniProt',
+      description: r.protein_name || '',
+      link: r.link || '',
+      retrieved_at: r.retrieved_at || null,
+    }))
 
   return (
     <>
@@ -148,7 +204,14 @@ export function BatchPage() {
         eyebrow="Bulk annotation"
         title="Batch lookup"
         description="Paste a gene list and get the full annotation table back in one pass — the same lookup you would otherwise repeat by hand for every row."
-        actions={data && <ExportMenu rows={data.rows} />}
+        actions={
+          data && (
+            <div className="flex items-center gap-2">
+              <SaveSelectionToProject items={selectedItems} onSaved={() => setSelected(new Set())} />
+              <ExportMenu rows={data.rows} />
+            </div>
+          )
+        }
       />
 
       <Scroller className="px-8 py-6">
@@ -251,7 +314,12 @@ export function BatchPage() {
               </div>
 
               <Card className="overflow-hidden">
-                <ResultsTable rows={data.rows} />
+                <ResultsTable
+                  rows={data.rows}
+                  selected={selected}
+                  onToggle={toggleRow}
+                  onToggleAll={toggleAll}
+                />
               </Card>
 
               <p className="text-[11px] text-ink-3">

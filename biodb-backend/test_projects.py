@@ -259,3 +259,39 @@ def test_batch_reports_failures_per_row_without_failing_the_batch(client, monkey
 
 def test_batch_rejects_empty_input(client):
     assert client.post("/batch", json={"identifiers": ["   ", ""]}).status_code == 400
+
+
+def test_bulk_save_preserves_provenance_for_every_item(client):
+    project = client.post("/projects", json={"name": "Bulk"}).json()
+    fetched_at = "2020-06-15T12:00:00+00:00"
+
+    res = client.post(
+        f"/projects/{project['id']}/items/bulk",
+        json={
+            "items": [
+                {"external_id": "A1", "name": "A", "database": "UniProt", "retrieved_at": fetched_at},
+                {"external_id": "A2", "name": "B", "database": "UniProt", "retrieved_at": fetched_at},
+                {"external_id": "A3", "name": "C", "database": "UniProt", "retrieved_at": fetched_at},
+            ]
+        },
+    ).json()
+
+    assert res["saved"] == 3
+    assert all(i["retrieved_at"].startswith("2020-06-15") for i in res["items"])
+
+    fetched = client.get(f"/projects/{project['id']}").json()
+    assert fetched["item_count"] == 3
+
+
+def test_bulk_save_rejects_empty_list(client):
+    project = client.post("/projects", json={"name": "Empty bulk"}).json()
+    res = client.post(f"/projects/{project['id']}/items/bulk", json={"items": []})
+    assert res.status_code == 400
+
+
+def test_bulk_save_404s_for_missing_project(client):
+    res = client.post(
+        "/projects/does-not-exist/items/bulk",
+        json={"items": [{"external_id": "X", "name": "X", "database": "UniProt"}]},
+    )
+    assert res.status_code == 404

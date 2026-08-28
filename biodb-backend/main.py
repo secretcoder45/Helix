@@ -112,6 +112,10 @@ class SavedItemCreate(BaseModel):
     notes: str = ""
 
 
+class BulkSavedItemsCreate(BaseModel):
+    items: List[SavedItemCreate]
+
+
 # ---- Routes ----
 @app.get("/health")
 async def health_check():
@@ -453,25 +457,21 @@ async def delete_project(project_id: str, session: Session = Depends(db_module.g
     return {"deleted": project_id}
 
 
-@app.post("/projects/{project_id}/items")
-async def add_item(
-    project_id: str, payload: SavedItemCreate, session: Session = Depends(db_module.get_db)
-):
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
+def _parse_retrieved_at(value: Optional[str]):
     # retrieved_at must reflect when the data was fetched from the source
     # database, not when the user clicked save — otherwise a result found
     # yesterday and saved today carries a citation date that's simply wrong.
-    retrieved_at = None
-    if payload.retrieved_at:
-        try:
-            retrieved_at = datetime.fromisoformat(payload.retrieved_at.replace("Z", "+00:00"))
-        except ValueError:
-            retrieved_at = None  # unparseable: fall back to the column default
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None  # unparseable: fall back to the column default
 
-    item = models.SavedItem(
+
+def _build_saved_item(project_id: str, payload: SavedItemCreate) -> models.SavedItem:
+    retrieved_at = _parse_retrieved_at(payload.retrieved_at)
+    return models.SavedItem(
         project_id=project_id,
         external_id=payload.external_id,
         name=payload.name,
@@ -481,10 +481,48 @@ async def add_item(
         notes=payload.notes,
         **({"retrieved_at": retrieved_at} if retrieved_at else {}),
     )
+
+
+@app.post("/projects/{project_id}/items")
+async def add_item(
+    project_id: str, payload: SavedItemCreate, session: Session = Depends(db_module.get_db)
+):
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    item = _build_saved_item(project_id, payload)
     session.add(item)
     session.commit()
     session.refresh(item)
     return _serialize_item(item)
+
+
+@app.post("/projects/{project_id}/items/bulk")
+async def add_items_bulk(
+    project_id: str, payload: BulkSavedItemsCreate, session: Session = Depends(db_module.get_db)
+):
+    """
+    Save many results into a project in one round trip.
+
+    Exists for batch lookup: saving results one row at a time from a
+    100-gene batch would mean 100 sequential requests against a free-tier
+    backend that can be cold-starting. One request, one commit.
+    """
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="No items provided")
+
+    items = [_build_saved_item(project_id, item) for item in payload.items]
+    session.add_all(items)
+    session.commit()
+    for item in items:
+        session.refresh(item)
+
+    return {"saved": len(items), "items": [_serialize_item(i) for i in items]}
 
 
 @app.delete("/projects/{project_id}/items/{item_id}")

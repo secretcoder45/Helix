@@ -122,6 +122,20 @@ export function useSaveItem() {
   })
 }
 
+export function useSaveItemsBulk() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, items }) => {
+      const { data } = await client.post(`/projects/${projectId}/items/bulk`, { items })
+      return data
+    },
+    onSuccess: (_data, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+  })
+}
+
 export function useRemoveItem() {
   const qc = useQueryClient()
   return useMutation({
