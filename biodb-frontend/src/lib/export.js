@@ -62,3 +62,76 @@ function slug(name) {
       .replace(/^-|-$/g, '') || 'project'
   )
 }
+
+/**
+ * Export batch results. Separate from the project exporters because a batch
+ * row is a flat annotation record, not a saved item — different columns, and
+ * unresolved rows are kept so the researcher can see what didn't match rather
+ * than silently getting a shorter list back than they pasted.
+ */
+export function exportBatchCsv(rows) {
+  const headers = [
+    'query',
+    'resolved',
+    'accession',
+    'entry_name',
+    'protein_name',
+    'organism',
+    'genes',
+    'length_aa',
+    'molecular_weight_da',
+    'structure_count',
+    'structures',
+    'pathways',
+    'gene_id',
+    'link',
+    'retrieved_at',
+  ]
+
+  const body = rows.map((r) =>
+    [
+      r.query,
+      r.resolved ? 'yes' : 'no',
+      r.accession,
+      r.name,
+      r.protein_name,
+      r.organism,
+      (r.genes || []).join('; '),
+      r.length,
+      r.molecular_weight,
+      r.structure_count,
+      (r.structures || []).join('; '),
+      (r.pathways || []).join('; '),
+      r.gene_id,
+      r.link,
+      r.retrieved_at,
+    ]
+      .map(csvCell)
+      .join(','),
+  )
+
+  download(
+    `batch-annotation-${new Date().toISOString().split('T')[0]}.csv`,
+    [headers.join(','), ...body].join('\n'),
+    'text/csv;charset=utf-8',
+  )
+}
+
+export function exportBatchFasta(rows) {
+  const withSeq = rows.filter((r) => r.resolved && r.sequence)
+  if (!withSeq.length) return
+  const text = withSeq
+    .map(
+      (r) =>
+        `>${r.accession}|${r.name} ${r.protein_name} OS=${r.organism}\n${r.sequence.replace(
+          /(.{60})/g,
+          '$1\n',
+        )}`,
+    )
+    .join('\n')
+  download(
+    `batch-sequences-${new Date().toISOString().split('T')[0]}.fasta`,
+    `${text}\n`,
+    'text/plain;charset=utf-8',
+  )
+}

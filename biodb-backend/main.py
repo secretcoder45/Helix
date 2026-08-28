@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -76,6 +77,13 @@ class SearchResult(BaseModel):
 class ChatMessage(BaseModel):
     query: str
     context: str = "general"
+
+
+class BatchRequest(BaseModel):
+    # A list of strings rather than one blob so the client can send either a
+    # parsed list or a single pasted chunk — both are split server-side.
+    identifiers: List[str]
+    include_gene: bool = False
 
 
 class ProjectCreate(BaseModel):
@@ -270,6 +278,129 @@ async def get_entity(query: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---- Batch lookup ----
+# The single biggest time saver here: annotating a gene list one entry at a
+# time is a routine hours-long chore, and it's pure mechanical lookup.
+
+MAX_BATCH = 200
+_BATCH_WORKERS = 8
+
+
+def _parse_identifiers(raw: List[str]) -> List[str]:
+    """
+    Normalise a pasted gene list.
+
+    Real lists arrive from spreadsheets and papers, so they come separated by
+    newlines, commas, tabs, or spaces, often with blank lines and duplicates.
+    Order is preserved (researchers expect their input order back) while
+    duplicates are dropped case-insensitively.
+    """
+    tokens: List[str] = []
+    for chunk in raw:
+        tokens.extend(re.split(r"[\s,;]+", chunk or ""))
+
+    seen = set()
+    out = []
+    for token in tokens:
+        cleaned = token.strip()
+        if not cleaned:
+            continue
+        key = cleaned.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(cleaned)
+    return out
+
+
+def _batch_row(query: str, include_gene: bool) -> Dict:
+    """Resolve one identifier into a flat row suitable for a table or CSV."""
+    entity = db_connector.resolve_entity(query)
+    if not entity:
+        return {"query": query, "resolved": False}
+
+    row = {
+        "query": query,
+        "resolved": True,
+        "accession": entity.get("accession"),
+        "name": entity.get("name"),
+        "protein_name": entity.get("protein_name"),
+        "organism": entity.get("organism"),
+        "genes": entity.get("genes", []),
+        "length": entity.get("sequence", {}).get("length"),
+        "molecular_weight": entity.get("sequence", {}).get("molecular_weight"),
+        # Included so a batch can be exported straight to FASTA — bulk sequence
+        # retrieval is otherwise its own manual chore.
+        "sequence": entity.get("sequence", {}).get("value", ""),
+        "structure_count": len(entity.get("structures", [])),
+        "structures": [s["id"] for s in entity.get("structures", [])[:5]],
+        "pathways": [p["id"] for p in entity.get("pathways", [])],
+        "function": entity.get("function", ""),
+        "link": entity.get("links", {}).get("uniprot"),
+        "retrieved_at": entity.get("retrieved_at"),
+    }
+
+    # Off by default: NCBI is the rate-limited source, so enriching a 200-row
+    # batch adds real wall-clock time. Opt in when the gene IDs are needed.
+    if include_gene:
+        symbol = entity["genes"][0] if entity.get("genes") else query
+        hits = db_connector.search_ncbi_gene(symbol)
+        row["gene_id"] = hits[0]["id"] if hits else None
+        row["gene_link"] = hits[0]["link"] if hits else None
+
+    return row
+
+
+@app.post("/batch")
+def batch_lookup(payload: BatchRequest):
+    """
+    Resolve many identifiers at once.
+
+    Runs the lookups concurrently over a bounded pool — serial resolution of a
+    100-gene list would take minutes. Failures are reported per row rather than
+    failing the batch, since one unrecognised symbol in a list of 80 shouldn't
+    cost the researcher the other 79.
+
+    Declared `def` rather than `async def` so FastAPI runs it in its worker
+    threadpool; the connector underneath is blocking `requests`.
+    """
+    identifiers = _parse_identifiers(payload.identifiers)
+    if not identifiers:
+        raise HTTPException(status_code=400, detail="No identifiers provided")
+
+    truncated = len(identifiers) > MAX_BATCH
+    identifiers = identifiers[:MAX_BATCH]
+
+    rows: Dict[str, Dict] = {}
+    with ThreadPoolExecutor(max_workers=_BATCH_WORKERS) as pool:
+        futures = {
+            pool.submit(_batch_row, ident, payload.include_gene): ident
+            for ident in identifiers
+        }
+        for future in as_completed(futures):
+            ident = futures[future]
+            try:
+                rows[ident] = future.result()
+            except Exception as e:
+                # A single lookup blowing up shouldn't take the batch with it.
+                rows[ident] = {"query": ident, "resolved": False, "error": str(e)}
+
+    # Restore the caller's input order, which as_completed does not preserve.
+    ordered = [rows[i] for i in identifiers]
+    resolved = [r for r in ordered if r.get("resolved")]
+
+    return {
+        "rows": ordered,
+        "stats": {
+            "requested": len(identifiers),
+            "resolved": len(resolved),
+            "unresolved": len(ordered) - len(resolved),
+            "truncated": truncated,
+            "max_batch": MAX_BATCH,
+        },
+    }
 
 
 # ---- Projects (saved workspaces) ----

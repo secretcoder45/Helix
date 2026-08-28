@@ -51,6 +51,18 @@ export function useEntity(query) {
   })
 }
 
+export function useBatch() {
+  return useMutation({
+    mutationFn: async ({ identifiers, includeGene }) => {
+      const { data } = await client.post('/batch', {
+        identifiers,
+        include_gene: Boolean(includeGene),
+      })
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

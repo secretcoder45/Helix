@@ -156,3 +156,106 @@ def test_cache_returns_same_object_without_refetching(monkeypatch):
 
     fake_search("kinase")
     assert calls["n"] == 2, "a different argument should miss the cache"
+
+
+@pytest.mark.network
+def test_exact_gene_symbol_beats_substring_match(client):
+    """
+    Regression: `gene:INS` also matches the INS-IGF2 readthrough gene, and
+    UniProt's ranking is not stable across page sizes — the resolver returned
+    F8WCM5 (200 aa readthrough) instead of P01308 (110 aa insulin) for the
+    exact official symbol "INS". Silent wrong-protein results are the most
+    dangerous failure mode this tool has.
+    """
+    entity = client.get("/entity/INS").json()
+    assert entity["accession"] == "P01308"
+    assert entity["genes"] == ["INS"]
+    assert entity["sequence"]["length"] == 110
+
+
+@pytest.mark.network
+@pytest.mark.parametrize(
+    "symbol,accession,length",
+    [
+        ("BRCA1", "P38398", 1863),
+        ("TP53", "P04637", 393),
+        ("EGFR", "P00533", 1210),
+        ("CFTR", "P13569", 1480),
+    ],
+)
+def test_canonical_symbols_resolve_to_reviewed_human_entries(
+    client, symbol, accession, length
+):
+    entity = client.get(f"/entity/{symbol}").json()
+    assert entity["accession"] == accession
+    assert entity["organism"] == "Homo sapiens"
+    assert entity["sequence"]["length"] == length
+
+
+def test_batch_parses_mixed_delimiters_and_dedupes(client, monkeypatch):
+    # Parsing and ordering are pure logic; stub the network so this stays a
+    # fast offline test.
+    import main
+
+    monkeypatch.setattr(
+        main.db_connector,
+        "resolve_entity",
+        lambda q: {
+            "accession": f"ACC-{q}",
+            "name": q,
+            "genes": [q],
+            "sequence": {"length": 1, "molecular_weight": 1},
+            "structures": [],
+            "pathways": [],
+            "links": {"uniprot": "u"},
+        },
+    )
+
+    res = client.post(
+        "/batch",
+        json={"identifiers": ["BRCA1, TP53\nINS\tEGFR", " brca1 ", ""]},
+    ).json()
+
+    # Mixed delimiters split, blanks dropped, "brca1" deduped against "BRCA1"
+    assert [r["query"] for r in res["rows"]] == ["BRCA1", "TP53", "INS", "EGFR"]
+    assert res["stats"] == {
+        "requested": 4,
+        "resolved": 4,
+        "unresolved": 0,
+        "truncated": False,
+        "max_batch": main.MAX_BATCH,
+    }
+
+
+def test_batch_reports_failures_per_row_without_failing_the_batch(client, monkeypatch):
+    import main
+
+    def flaky(q):
+        if q == "BOOM":
+            raise RuntimeError("upstream exploded")
+        if q == "MISSING":
+            return {}
+        return {
+            "accession": f"ACC-{q}",
+            "name": q,
+            "genes": [],
+            "sequence": {},
+            "structures": [],
+            "pathways": [],
+            "links": {},
+        }
+
+    monkeypatch.setattr(main.db_connector, "resolve_entity", flaky)
+
+    res = client.post("/batch", json={"identifiers": ["OK1", "BOOM", "MISSING"]}).json()
+    by_query = {r["query"]: r for r in res["rows"]}
+
+    assert by_query["OK1"]["resolved"] is True
+    assert by_query["BOOM"]["resolved"] is False
+    assert "upstream exploded" in by_query["BOOM"]["error"]
+    assert by_query["MISSING"]["resolved"] is False
+    assert res["stats"]["resolved"] == 1
+
+
+def test_batch_rejects_empty_input(client):
+    assert client.post("/batch", json={"identifiers": ["   ", ""]}).status_code == 400

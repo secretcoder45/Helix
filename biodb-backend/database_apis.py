@@ -1,4 +1,6 @@
 import os
+import threading
+import time
 import requests
 from datetime import datetime, timezone
 from typing import List, Dict
@@ -8,6 +10,37 @@ from cache import cached
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+class _RateLimiter:
+    """
+    Minimum-interval limiter, shared across threads.
+
+    NCBI caps E-utilities at 3 requests/sec without an API key and 10/sec with
+    one, and enforces it with 429s and temporary IP blocks. Single lookups
+    never came close, but batch resolution fans out across a thread pool and
+    would trip it immediately — so the throttle lives at the call site rather
+    than being left to callers to remember.
+    """
+
+    def __init__(self, per_second: float):
+        self._min_interval = 1.0 / per_second
+        self._lock = threading.Lock()
+        self._last = 0.0
+
+    def acquire(self) -> None:
+        with self._lock:
+            now = time.monotonic()
+            wait = self._last + self._min_interval - now
+            if wait > 0:
+                time.sleep(wait)
+                now = time.monotonic()
+            self._last = now
+
+
+# Built once at import: the key is read from the environment at startup, and
+# the limit depends on whether we have one.
+_NCBI_LIMITER = _RateLimiter(10.0 if os.getenv("NCBI_API_KEY") else 3.0)
 
 
 class DatabaseConnector:
@@ -39,6 +72,7 @@ class DatabaseConnector:
             if api_key:
                 params["api_key"] = api_key
 
+            _NCBI_LIMITER.acquire()
             response = requests.get(url, params=params, timeout=8)
             if response.status_code != 200:
                 return []
@@ -58,6 +92,7 @@ class DatabaseConnector:
             if api_key:
                 summary_params["api_key"] = api_key
 
+            _NCBI_LIMITER.acquire()
             summary_response = requests.get(summary_url, params=summary_params, timeout=8)
             if summary_response.status_code != 200:
                 return []
@@ -217,33 +252,73 @@ class DatabaseConnector:
         searches (and four chances to mismatch identifiers) into one call whose
         cross-references are curator-verified.
 
-        Prefers reviewed (Swiss-Prot) human entries, then any reviewed entry,
-        then whatever matches — so "BRCA1" lands on the canonical human protein
-        rather than an unreviewed fragment from another organism.
+        Selection is deliberately not "whatever the API ranked first". Two
+        reasons, both found in testing:
+
+        - `gene:INS` also matches the INS-IGF2 readthrough gene, so a substring
+          match can silently return the wrong protein (200 aa readthrough
+          instead of 110 aa insulin) for an exact official symbol.
+        - UniProt's ordering is not stable across page sizes — the same query
+          returned P01308 first at size=3 and F8WCM5 first at size=1.
+
+        So we query exact-symbol first, ask for several candidates, and pick
+        deterministically: exact gene symbol beats partial, human beats other
+        organisms, reviewed beats unreviewed.
         """
         try:
             url = DatabaseConnector.BASE_URLS["uniprot"]
+            wanted = query.strip().upper()
 
-            # Try progressively looser queries rather than a single broad one.
+            # Progressively looser. gene_exact avoids the substring trap above.
             attempts = [
+                f"gene_exact:{query} AND organism_id:9606 AND reviewed:true",
+                f"gene_exact:{query} AND reviewed:true",
                 f"(gene:{query} OR protein_name:{query}) AND organism_id:9606 AND reviewed:true",
                 f"(gene:{query} OR protein_name:{query}) AND reviewed:true",
                 f"{query} AND reviewed:true",
                 query,
             ]
 
+            def score(candidate: Dict) -> tuple:
+                symbols = {
+                    (g.get("geneName") or {}).get("value", "").upper()
+                    for g in candidate.get("genes", [])
+                }
+                return (
+                    wanted in symbols,
+                    candidate.get("organism", {}).get("taxonId") == 9606,
+                    candidate.get("entryType", "").startswith("UniProtKB reviewed"),
+                )
+
+            # Request only the fields we parse. A full UniProt entry is ~270 KB
+            # (BRCA1 carries hundreds of cross-references and publications);
+            # trimmed it is ~11 KB. Irrelevant for one lookup, but a 200-row
+            # batch is the difference between ~54 MB and ~2 MB of transfer and
+            # parsing.
+            fields = (
+                "accession,id,protein_name,organism_name,gene_names,"
+                "cc_function,sequence,xref_pdb,xref_kegg"
+            )
+
             entry = None
             for term in attempts:
                 response = requests.get(
                     url,
-                    params={"query": term, "format": "json", "size": 1},
-                    timeout=10,
+                    # Several candidates, not one: picking from a set is what
+                    # makes the choice stable and lets the scoring apply.
+                    params={
+                        "query": term,
+                        "format": "json",
+                        "size": 10,
+                        "fields": fields,
+                    },
+                    timeout=15,
                 )
                 if response.status_code != 200:
                     continue
                 results = response.json().get("results", [])
                 if results:
-                    entry = results[0]
+                    entry = max(results, key=score)
                     break
 
             if not entry:

@@ -8,6 +8,7 @@ import { CommandPalette } from './components/CommandPalette'
 import { EntityPage } from './pages/EntityPage'
 import { ChatPage } from './pages/ChatPage'
 import { ProjectsPage } from './pages/ProjectsPage'
+import { BatchPage } from './pages/BatchPage'
 import { SearchPage } from './pages/SearchPage'
 import { LogoMark } from './components/Logo'
 
@@ -97,6 +98,7 @@ function App() {
       >
         <Routes>
           <Route path="/" element={<EntityPage />} />
+          <Route path="/batch" element={<BatchPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/db/:database" element={<SearchPage databases={databases} />} />
