@@ -1,6 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
@@ -9,6 +12,9 @@ import re
 
 from database_apis import db_connector
 from llm_service import llm
+from cache import cache_stats
+import db as db_module
+import models
 
 # Stripped from natural-language chat questions before hitting database search
 # APIs, which expect keyword-like queries (e.g. "insulin"), not full sentences
@@ -28,9 +34,17 @@ def _extract_search_terms(query: str) -> str:
     keywords = [w for w in words if w not in _STOPWORDS]
     return " ".join(keywords[:5]) if keywords else query
 
+
 load_dotenv()
 
-app = FastAPI(title="Unified Bioinformatics Database")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db_module.init_db()
+    yield
+
+
+app = FastAPI(title="Unified Bioinformatics Database", lifespan=lifespan)
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -55,6 +69,7 @@ class SearchResult(BaseModel):
     database: str
     description: str
     link: str
+    retrieved_at: Optional[str] = None
 
 
 class ChatMessage(BaseModel):
@@ -62,10 +77,31 @@ class ChatMessage(BaseModel):
     context: str = "general"
 
 
+class ProjectCreate(BaseModel):
+    name: str
+    description: str = ""
+
+
+class SavedItemCreate(BaseModel):
+    external_id: str
+    name: str
+    database: str
+    description: str = ""
+    link: str = ""
+    retrieved_at: Optional[str] = None
+    notes: str = ""
+
+
 # ---- Routes ----
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+@app.get("/cache/stats")
+async def cache_statistics():
+    """Visibility into the in-memory API response cache."""
+    return cache_stats()
 
 
 @app.get("/databases")
@@ -113,6 +149,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "database": "UniProt",
                 "description": r["description"],
                 "link": r["link"],
+                "retrieved_at": r.get("retrieved_at"),
             }
             for r in db_connector.search_uniprot_protein(query)
         ]
@@ -123,6 +160,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "database": "PDB",
                 "description": r["description"],
                 "link": r["link"],
+                "retrieved_at": r.get("retrieved_at"),
             }
             for r in db_connector.search_pdb_protein(query)
         )
@@ -135,6 +173,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "database": "NCBI Gene",
                 "description": r["description"],
                 "link": r["link"],
+                "retrieved_at": r.get("retrieved_at"),
             }
             for r in db_connector.search_ncbi_gene(query)
         ]
@@ -147,6 +186,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "database": "KEGG",
                 "description": r["description"],
                 "link": r["link"],
+                "retrieved_at": r.get("retrieved_at"),
             }
             for r in db_connector.search_kegg_pathway(query)
         ]
@@ -190,6 +230,109 @@ async def chat(message: ChatMessage):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---- Projects (saved workspaces) ----
+# Lets a researcher save results across searches instead of losing them the
+# moment they navigate away — the foundation for batch review, export, and
+# citation later.
+
+
+@app.post("/projects")
+async def create_project(payload: ProjectCreate, session: Session = Depends(db_module.get_db)):
+    project = models.Project(name=payload.name, description=payload.description)
+    session.add(project)
+    session.commit()
+    session.refresh(project)
+    return _serialize_project(project)
+
+
+@app.get("/projects")
+async def list_projects(session: Session = Depends(db_module.get_db)):
+    projects = session.query(models.Project).order_by(models.Project.created_at.desc()).all()
+    return [_serialize_project(p) for p in projects]
+
+
+@app.get("/projects/{project_id}")
+async def get_project(project_id: str, session: Session = Depends(db_module.get_db)):
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return _serialize_project(project, include_items=True)
+
+
+@app.delete("/projects/{project_id}")
+async def delete_project(project_id: str, session: Session = Depends(db_module.get_db)):
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    session.delete(project)
+    session.commit()
+    return {"deleted": project_id}
+
+
+@app.post("/projects/{project_id}/items")
+async def add_item(
+    project_id: str, payload: SavedItemCreate, session: Session = Depends(db_module.get_db)
+):
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    item = models.SavedItem(
+        project_id=project_id,
+        external_id=payload.external_id,
+        name=payload.name,
+        database=payload.database,
+        description=payload.description,
+        link=payload.link,
+        notes=payload.notes,
+    )
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return _serialize_item(item)
+
+
+@app.delete("/projects/{project_id}/items/{item_id}")
+async def remove_item(project_id: str, item_id: str, session: Session = Depends(db_module.get_db)):
+    item = (
+        session.query(models.SavedItem)
+        .filter(models.SavedItem.id == item_id, models.SavedItem.project_id == project_id)
+        .first()
+    )
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    session.delete(item)
+    session.commit()
+    return {"deleted": item_id}
+
+
+def _serialize_item(item: models.SavedItem) -> dict:
+    return {
+        "id": item.id,
+        "external_id": item.external_id,
+        "name": item.name,
+        "database": item.database,
+        "description": item.description,
+        "link": item.link,
+        "notes": item.notes,
+        "retrieved_at": item.retrieved_at.isoformat() if item.retrieved_at else None,
+        "saved_at": item.saved_at.isoformat() if item.saved_at else None,
+    }
+
+
+def _serialize_project(project: models.Project, include_items: bool = False) -> dict:
+    data = {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "created_at": project.created_at.isoformat() if project.created_at else None,
+        "item_count": len(project.items),
+    }
+    if include_items:
+        data["items"] = [_serialize_item(i) for i in project.items]
+    return data
 
 
 if __name__ == "__main__":

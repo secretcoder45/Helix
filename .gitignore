@@ -5,6 +5,9 @@ biodb-backend/**/__pycache__/
 *.pyc
 biodb-backend/.env
 
+# Local database
+biodb-backend/*.sqlite3
+
 # Node
 biodb-frontend/node_modules/
 biodb-frontend/dist/
