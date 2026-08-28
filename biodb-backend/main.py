@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -232,6 +233,45 @@ async def chat(message: ChatMessage):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/entity/{query}")
+async def get_entity(query: str):
+    """
+    One lookup, cross-referenced across databases.
+
+    Instead of making a researcher search four databases separately and manually
+    match identifiers, this resolves a gene/protein name to its canonical
+    UniProt entry and returns the linked gene record, structures, and pathways
+    together.
+    """
+    try:
+        entity = db_connector.resolve_entity(query)
+        if not entity:
+            raise HTTPException(status_code=404, detail=f"No entity found for '{query}'")
+
+        # Attach the NCBI Gene record for the resolved gene symbol. Uses the
+        # symbol UniProt gives us rather than the raw user query, so a search
+        # for a protein name still finds the right gene.
+        gene_symbol = entity["genes"][0] if entity.get("genes") else query
+        gene_hits = db_connector.search_ncbi_gene(gene_symbol)
+        entity["genes_detail"] = [
+            {
+                "id": g["id"],
+                "name": g["name"],
+                "database": "NCBI Gene",
+                "description": g["description"],
+                "link": g["link"],
+            }
+            for g in gene_hits[:3]
+        ]
+
+        return entity
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ---- Projects (saved workspaces) ----
 # Lets a researcher save results across searches instead of losing them the
 # moment they navigate away — the foundation for batch review, export, and
@@ -279,6 +319,16 @@ async def add_item(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # retrieved_at must reflect when the data was fetched from the source
+    # database, not when the user clicked save — otherwise a result found
+    # yesterday and saved today carries a citation date that's simply wrong.
+    retrieved_at = None
+    if payload.retrieved_at:
+        try:
+            retrieved_at = datetime.fromisoformat(payload.retrieved_at.replace("Z", "+00:00"))
+        except ValueError:
+            retrieved_at = None  # unparseable: fall back to the column default
+
     item = models.SavedItem(
         project_id=project_id,
         external_id=payload.external_id,
@@ -287,6 +337,7 @@ async def add_item(
         description=payload.description,
         link=payload.link,
         notes=payload.notes,
+        **({"retrieved_at": retrieved_at} if retrieved_at else {}),
     )
     session.add(item)
     session.commit()

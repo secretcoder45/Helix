@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -34,6 +34,92 @@ export function useChat() {
     mutationFn: async (query) => {
       const { data } = await client.post('/chat', { query })
       return data
+    },
+  })
+}
+
+export function useEntity(query) {
+  return useQuery({
+    queryKey: ['entity', query],
+    queryFn: async () => {
+      const { data } = await client.get(`/entity/${encodeURIComponent(query)}`)
+      return data
+    },
+    enabled: Boolean(query && query.trim().length > 1),
+    retry: false,
+    staleTime: 5 * 60_000,
+  })
+}
+
+// ---- Projects ----
+
+export function useProjects() {
+  return useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const { data } = await client.get('/projects')
+      return data
+    },
+  })
+}
+
+export function useProject(projectId) {
+  return useQuery({
+    queryKey: ['project', projectId],
+    queryFn: async () => {
+      const { data } = await client.get(`/projects/${projectId}`)
+      return data
+    },
+    enabled: Boolean(projectId),
+  })
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/projects', payload)
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useDeleteProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (projectId) => {
+      const { data } = await client.delete(`/projects/${projectId}`)
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useSaveItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, item }) => {
+      const { data } = await client.post(`/projects/${projectId}/items`, item)
+      return data
+    },
+    onSuccess: (_data, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+  })
+}
+
+export function useRemoveItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, itemId }) => {
+      const { data } = await client.delete(`/projects/${projectId}/items/${itemId}`)
+      return data
+    },
+    onSuccess: (_data, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
     },
   })
 }

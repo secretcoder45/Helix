@@ -61,6 +61,37 @@ def test_project_lifecycle(client):
     assert client.get(f"/projects/{project_id}").status_code == 404
 
 
+def test_saved_item_preserves_source_retrieval_time(client):
+    # Provenance regression: retrieved_at must record when the data was fetched
+    # from the source database, not when the user clicked save. Otherwise a
+    # result found yesterday and saved today gets a wrong citation date.
+    project = client.post("/projects", json={"name": "Provenance"}).json()
+    fetched_at = "2020-01-02T03:04:05+00:00"
+
+    item = client.post(
+        f"/projects/{project['id']}/items",
+        json={
+            "external_id": "P01308",
+            "name": "INS_HUMAN",
+            "database": "UniProt",
+            "retrieved_at": fetched_at,
+        },
+    ).json()
+
+    assert item["retrieved_at"].startswith("2020-01-02T03:04:05")
+    # saved_at is separate and should be "now", not the retrieval time
+    assert not item["saved_at"].startswith("2020-01-02")
+
+
+def test_saved_item_without_retrieved_at_defaults_to_now(client):
+    project = client.post("/projects", json={"name": "Default ts"}).json()
+    item = client.post(
+        f"/projects/{project['id']}/items",
+        json={"external_id": "X", "name": "X", "database": "UniProt"},
+    ).json()
+    assert item["retrieved_at"] is not None
+
+
 def test_missing_project_404s(client):
     assert client.get("/projects/does-not-exist").status_code == 404
     assert (
@@ -79,6 +110,33 @@ def test_extract_search_terms_strips_question_words():
     assert main._extract_search_terms("Tell me about the BRCA1 gene") == "brca1 gene"
     # A query that is already keywords passes through unchanged
     assert main._extract_search_terms("insulin") == "insulin"
+
+
+@pytest.mark.network
+def test_entity_cross_references_agree(client):
+    """
+    The value of entity linking is that identifiers from different databases
+    line up. BRCA1's KEGG xref (hsa:672) should match the NCBI Gene ID (672) —
+    if those diverge, we're stitching together records for different genes.
+
+    Hits live APIs; deselect with `-m "not network"`.
+    """
+    entity = client.get("/entity/BRCA1").json()
+
+    assert entity["accession"] == "P38398"
+    assert "BRCA1" in entity["genes"]
+    assert entity["organism"] == "Homo sapiens"
+    assert entity["sequence"]["length"] == 1863
+    assert len(entity["structures"]) > 10
+
+    kegg_gene_id = entity["pathways"][0]["id"].split(":")[-1]
+    ncbi_gene_ids = [g["id"] for g in entity["genes_detail"]]
+    assert kegg_gene_id in ncbi_gene_ids, "KEGG and NCBI identifiers disagree"
+
+
+@pytest.mark.network
+def test_entity_404s_for_nonsense(client):
+    assert client.get("/entity/notarealgene12345").status_code == 404
 
 
 def test_cache_returns_same_object_without_refetching(monkeypatch):

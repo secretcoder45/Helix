@@ -4,6 +4,7 @@ import { ExternalLink, X, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
 import { colorFor } from '../lib/databaseMeta'
 import { ACCENT } from '../lib/colorClasses'
+import { SaveToProject } from './SaveToProject'
 
 function CopyId({ id }) {
   const [copied, setCopied] = useState(false)
@@ -97,10 +98,22 @@ export function DetailPanel({ result, open, onOpenChange }) {
                         <CopyId id={result.id} />
                       </dd>
                     </div>
+                    {result.retrieved_at && (
+                      <div>
+                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                          Retrieved
+                        </dt>
+                        <dd className="mt-1 text-xs text-slate-500">
+                          {new Date(result.retrieved_at).toLocaleString()} from{' '}
+                          {result.database}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
 
-                <div className="border-t border-slate-200 p-5 dark:border-slate-800">
+                <div className="space-y-2 border-t border-slate-200 p-5 dark:border-slate-800">
+                  <SaveToProject result={result} />
                   <a
                     href={result.link}
                     target="_blank"

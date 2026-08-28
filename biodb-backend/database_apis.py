@@ -205,5 +205,119 @@ class DatabaseConnector:
             return []
 
 
+    @staticmethod
+    @cached("entity")
+    def resolve_entity(query: str) -> Dict:
+        """
+        Cross-reference a gene/protein across databases in one lookup.
+
+        UniProt is the hub: a single reviewed entry carries the gene name, every
+        solved PDB structure, the KEGG identifier, the sequence, and a curated
+        function description. That turns what would otherwise be four separate
+        searches (and four chances to mismatch identifiers) into one call whose
+        cross-references are curator-verified.
+
+        Prefers reviewed (Swiss-Prot) human entries, then any reviewed entry,
+        then whatever matches — so "BRCA1" lands on the canonical human protein
+        rather than an unreviewed fragment from another organism.
+        """
+        try:
+            url = DatabaseConnector.BASE_URLS["uniprot"]
+
+            # Try progressively looser queries rather than a single broad one.
+            attempts = [
+                f"(gene:{query} OR protein_name:{query}) AND organism_id:9606 AND reviewed:true",
+                f"(gene:{query} OR protein_name:{query}) AND reviewed:true",
+                f"{query} AND reviewed:true",
+                query,
+            ]
+
+            entry = None
+            for term in attempts:
+                response = requests.get(
+                    url,
+                    params={"query": term, "format": "json", "size": 1},
+                    timeout=10,
+                )
+                if response.status_code != 200:
+                    continue
+                results = response.json().get("results", [])
+                if results:
+                    entry = results[0]
+                    break
+
+            if not entry:
+                return {}
+
+            accession = entry.get("primaryAccession")
+
+            # Gene symbols
+            genes = [
+                g.get("geneName", {}).get("value")
+                for g in entry.get("genes", [])
+                if g.get("geneName")
+            ]
+
+            # Curated function description
+            function = ""
+            for comment in entry.get("comments", []):
+                if comment.get("commentType") == "FUNCTION" and comment.get("texts"):
+                    function = comment["texts"][0].get("value", "")
+                    break
+
+            # Cross-references, grouped by target database
+            xrefs = entry.get("uniProtKBCrossReferences", [])
+            pdb_ids, kegg_ids = [], []
+            for x in xrefs:
+                if x.get("database") == "PDB":
+                    pdb_ids.append(x.get("id"))
+                elif x.get("database") == "KEGG":
+                    kegg_ids.append(x.get("id"))
+
+            sequence = entry.get("sequence", {})
+
+            return {
+                "query": query,
+                "accession": accession,
+                "name": entry.get("uniProtkbId"),
+                "protein_name": entry.get("proteinDescription", {})
+                .get("recommendedName", {})
+                .get("fullName", {})
+                .get("value", ""),
+                "organism": entry.get("organism", {}).get("scientificName", ""),
+                "genes": genes,
+                "function": function,
+                "sequence": {
+                    "length": sequence.get("length"),
+                    "molecular_weight": sequence.get("molWeight"),
+                    "value": sequence.get("value", ""),
+                },
+                "structures": [
+                    {
+                        "id": pdb_id,
+                        "database": "PDB",
+                        "link": f"https://www.rcsb.org/structure/{pdb_id}",
+                    }
+                    for pdb_id in pdb_ids
+                ],
+                "pathways": [
+                    {
+                        "id": kegg_id,
+                        "database": "KEGG",
+                        "link": f"https://www.kegg.jp/entry/{kegg_id}",
+                    }
+                    for kegg_id in kegg_ids
+                ],
+                "links": {
+                    "uniprot": f"https://www.uniprot.org/uniprotkb/{accession}",
+                },
+                "retrieved_at": _now_iso(),
+            }
+
+        except Exception as e:
+            print(f"Entity resolution error: {e}")
+            return {}
+
+
 # Singleton instance
 db_connector = DatabaseConnector()

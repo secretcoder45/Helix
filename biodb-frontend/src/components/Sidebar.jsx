@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Moon, Sun, Command, Sparkles } from 'lucide-react'
+import { Moon, Sun, Command, Sparkles, FolderOpen, Link2 } from 'lucide-react'
 import { iconFor, colorFor } from '../lib/databaseMeta'
 import { ACCENT } from '../lib/colorClasses'
 
@@ -26,6 +26,19 @@ export function Sidebar({ databases, dark, setDark, onOpenPalette }) {
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
         <NavLink
+          to="/entity"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+            }`
+          }
+        >
+          <Link2 size={17} />
+          Cross-reference
+        </NavLink>
+        <NavLink
           to="/chat"
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
@@ -37,6 +50,19 @@ export function Sidebar({ databases, dark, setDark, onOpenPalette }) {
         >
           <Sparkles size={17} />
           Assistant
+        </NavLink>
+        <NavLink
+          to="/projects"
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400'
+                : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+            }`
+          }
+        >
+          <FolderOpen size={17} />
+          Projects
         </NavLink>
         <div className="my-2 border-t border-slate-100 dark:border-slate-800" />
         {Object.entries(databases).map(([key, db]) => {

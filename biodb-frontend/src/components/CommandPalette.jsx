@@ -1,6 +1,6 @@
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Link2, FolderOpen } from 'lucide-react'
 import { iconFor } from '../lib/databaseMeta'
 import { useEffect } from 'react'
 
@@ -41,16 +41,23 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
           </Command.Empty>
 
           <Command.Group heading="" className="px-2 py-1">
-            <Command.Item
-              onSelect={() => {
-                navigate('/chat')
-                setOpen(false)
-              }}
-              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm data-[selected=true]:bg-slate-100 dark:data-[selected=true]:bg-slate-800"
-            >
-              <Sparkles size={16} className="text-indigo-400" />
-              Ask the Assistant
-            </Command.Item>
+            {[
+              { to: '/entity', icon: Link2, label: 'Cross-reference a gene or protein' },
+              { to: '/chat', icon: Sparkles, label: 'Ask the Assistant' },
+              { to: '/projects', icon: FolderOpen, label: 'Open Projects' },
+            ].map(({ to, icon: Icon, label }) => (
+              <Command.Item
+                key={to}
+                onSelect={() => {
+                  navigate(to)
+                  setOpen(false)
+                }}
+                className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm data-[selected=true]:bg-slate-100 dark:data-[selected=true]:bg-slate-800"
+              >
+                <Icon size={16} className="text-indigo-400" />
+                {label}
+              </Command.Item>
+            ))}
           </Command.Group>
 
           <Command.Group heading="Databases" className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-400">
