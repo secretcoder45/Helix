@@ -119,6 +119,15 @@ export function useBlastResults(rid, ready) {
   })
 }
 
+export function useAlign() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/align/needleman-wunsch', payload)
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

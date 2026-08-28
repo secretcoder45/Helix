@@ -16,6 +16,7 @@ from database_apis import db_connector
 from llm_service import llm
 import xml.etree.ElementTree as ET
 import blast_service
+import alignment_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -122,6 +123,17 @@ class BlastSubmit(BaseModel):
     sequence: str
     program: str = "blastp"
     database: str = "swissprot"
+
+
+class AlignRequest(BaseModel):
+    seq1: str
+    seq2: str
+    sequence_type: str = "protein"
+    matrix: str = "BLOSUM62"
+    gap_open: float = -10.0
+    gap_extend: float = -0.5
+    match_score: float = 5.0
+    mismatch_score: float = -4.0
 
 
 # ---- Routes ----
@@ -442,6 +454,37 @@ def batch_lookup(payload: BatchRequest):
             "max_batch": MAX_BATCH,
         },
     }
+
+
+# ---- Alignment ----
+# Computed locally rather than via an external API — see alignment_service.py
+# for why. No rate limiting or caching needed here: this is CPU-bound local
+# work, not a call to something else's infrastructure.
+
+_VALID_SEQ_TYPES = {"protein", "dna"}
+
+
+@app.post("/align/needleman-wunsch")
+def align_needleman_wunsch(payload: AlignRequest):
+    if payload.sequence_type not in _VALID_SEQ_TYPES:
+        raise HTTPException(
+            status_code=400, detail=f"sequence_type must be one of {sorted(_VALID_SEQ_TYPES)}"
+        )
+    try:
+        result = alignment_service.needleman_wunsch(
+            payload.seq1,
+            payload.seq2,
+            sequence_type=payload.sequence_type,
+            matrix=payload.matrix,
+            gap_open=payload.gap_open,
+            gap_extend=payload.gap_extend,
+            match_score=payload.match_score,
+            mismatch_score=payload.mismatch_score,
+        )
+    except alignment_service.AlignmentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return result
 
 
 # ---- BLAST ----

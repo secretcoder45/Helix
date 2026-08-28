@@ -4,6 +4,7 @@ import {
   Link2,
   Rows3,
   Dna,
+  GitCompareArrows,
   Sparkles,
   FolderOpen,
   Search,
@@ -97,6 +98,7 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             <NavItem to="/" end icon={Link2} label="Cross-reference" collapsed={collapsed} />
             <NavItem to="/batch" icon={Rows3} label="Batch lookup" collapsed={collapsed} />
             <NavItem to="/blast" icon={Dna} label="BLAST" collapsed={collapsed} />
+            <NavItem to="/align" icon={GitCompareArrows} label="Alignment" collapsed={collapsed} />
             <NavItem to="/chat" icon={Sparkles} label="Assistant" collapsed={collapsed} />
             <NavItem to="/projects" icon={FolderOpen} label="Projects" collapsed={collapsed} />
           </div>
