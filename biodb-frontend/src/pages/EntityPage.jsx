@@ -2,70 +2,91 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  Link2,
+  Search,
   Dna,
-  FlaskConical,
   Boxes,
   Waypoints,
   ExternalLink,
   Copy,
   Check,
+  AlertCircle,
+  Loader2,
+  Link2,
 } from 'lucide-react'
 import { useEntity } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
-import { SearchBar } from '../components/SearchBar'
 import { SaveToProject } from '../components/SaveToProject'
+import {
+  Card,
+  CardHeader,
+  Chip,
+  EmptyState,
+  Skeleton,
+  SourceBadge,
+  Scroller,
+} from '../components/ui'
 
-const EXAMPLES = ['BRCA1', 'TP53', 'INS', 'EGFR']
+const EXAMPLES = ['BRCA1', 'TP53', 'INS', 'EGFR', 'CFTR']
 
-function Section({ icon: Icon, title, count, children }) {
-  return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <h3 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        <Icon size={14} /> {title}
-        {count !== undefined && (
-          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800">
-            {count}
-          </span>
-        )}
-      </h3>
-      {children}
-    </section>
-  )
-}
-
-function SequenceBlock({ sequence }) {
+function useCopy() {
   const [copied, setCopied] = useState(false)
-  if (!sequence?.value) return null
-
-  const copy = async () => {
+  const copy = async (text) => {
     try {
-      await navigator.clipboard.writeText(`>${sequence.header || 'sequence'}\n${sequence.value}`)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
       /* clipboard unavailable */
     }
   }
+  return [copied, copy]
+}
 
+function Stat({ label, value, mono }) {
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs text-slate-500">
-          {sequence.length} aa · {Math.round(sequence.molecular_weight / 1000)} kDa
-        </span>
-        <button
-          onClick={copy}
-          className="flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] text-slate-500 hover:text-indigo-600 dark:border-slate-700"
-        >
-          {copied ? <Check size={11} /> : <Copy size={11} />}
-          {copied ? 'Copied' : 'Copy FASTA'}
-        </button>
-      </div>
-      <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-3 font-mono text-[11px] leading-relaxed text-slate-600 dark:bg-slate-950 dark:text-slate-400">
-        {sequence.value}
-      </pre>
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+        {label}
+      </dt>
+      <dd className={`mt-1 text-[13px] text-ink ${mono ? 'font-mono tnum' : ''}`}>{value}</dd>
     </div>
+  )
+}
+
+function SequenceCard({ entity }) {
+  const [copied, copy] = useCopy()
+  const seq = entity.sequence
+  if (!seq?.value) return null
+
+  const fasta = `>${entity.accession}|${entity.name} ${entity.protein_name}\n${seq.value.replace(
+    /(.{60})/g,
+    '$1\n',
+  )}`
+
+  return (
+    <Card>
+      <CardHeader
+        title="Sequence"
+        icon={Dna}
+        action={
+          <button
+            onClick={() => copy(fasta)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
+          >
+            {copied ? <Check size={11} className="text-ok" /> : <Copy size={11} />}
+            {copied ? 'Copied' : 'FASTA'}
+          </button>
+        }
+      />
+      <div className="grid grid-cols-2 gap-4 border-b border-line px-4 py-3 sm:grid-cols-3">
+        <Stat label="Length" value={`${seq.length} aa`} mono />
+        <Stat label="Mass" value={`${(seq.molecular_weight / 1000).toFixed(1)} kDa`} mono />
+        <Stat label="Accession" value={entity.accession} mono />
+      </div>
+      <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-all px-4 py-3 font-mono text-[11px] leading-[1.7] text-ink-2">
+        {seq.value}
+      </pre>
+    </Card>
   )
 }
 
@@ -84,181 +105,241 @@ export function EntityPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounced])
 
+  useEffect(() => {
+    if (urlQuery && urlQuery !== input) setInput(urlQuery)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlQuery])
+
   return (
-    <div className="mx-auto flex h-full max-w-3xl flex-col px-6 py-8">
-      <div className="mb-6">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          <Link2 size={18} className="text-indigo-500" /> Cross-reference
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          One lookup — gene, protein, structures, and pathways linked together.
-        </p>
+    <>
+      {/* Search header */}
+      <div className="shrink-0 border-b border-line bg-surface px-8 py-5">
+        <div className="mx-auto max-w-5xl">
+          <div className="relative">
+            <Search
+              size={17}
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"
+            />
+            <input
+              autoFocus
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Enter a gene symbol or protein name — BRCA1, TP53, insulin…"
+              className="h-11 w-full rounded-lg border border-line bg-paper pl-10 pr-10 text-[14px] text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+            />
+            {isFetching && (
+              <Loader2
+                size={15}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-accent"
+              />
+            )}
+          </div>
+
+          {!debounced && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-[11px] text-ink-3">Try</span>
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex}
+                  onClick={() => setInput(ex)}
+                  className="rounded-md border border-line px-2 py-1 font-mono text-[11px] text-ink-2 transition-colors hover:border-accent hover:text-accent"
+                >
+                  {ex}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <SearchBar
-        value={input}
-        onChange={setInput}
-        placeholder="Gene or protein name, e.g. BRCA1"
-        isFetching={isFetching}
-      />
+      <Scroller className="px-8 py-6">
+        <div className="mx-auto max-w-5xl">
+          {!debounced && (
+            <EmptyState
+              icon={Link2}
+              title="One lookup, every database"
+              description="Resolve a gene or protein once and see its UniProt record, NCBI gene entry, solved structures, and pathways together — with the identifiers verified against each other."
+            />
+          )}
 
-      <div className="mt-6 flex-1 space-y-3 overflow-y-auto pb-8">
-        {!debounced && (
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex}
-                onClick={() => setInput(ex)}
-                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-800 dark:text-slate-300"
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {isLoading && debounced && (
-          <div className="space-y-3">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-24 animate-pulse rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-              />
-            ))}
-          </div>
-        )}
-
-        {isError && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-400">
-            {error?.response?.status === 404
-              ? `No entry found for "${debounced}". Try an official gene symbol like BRCA1.`
-              : 'Something went wrong resolving that entity.'}
-          </div>
-        )}
-
-        {entity && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-3"
-          >
-            {/* Identity */}
-            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-5 dark:border-indigo-500/30 dark:bg-indigo-500/5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="text-lg font-semibold">{entity.protein_name || entity.name}</h3>
-                  <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                    <em>{entity.organism}</em> · {entity.genes.join(', ')}
-                  </p>
-                </div>
-                <a
-                  href={entity.links.uniprot}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex shrink-0 items-center gap-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-                >
-                  {entity.accession} <ExternalLink size={12} />
-                </a>
-              </div>
-              {entity.function && (
-                <p className="mt-3 border-t border-indigo-200/60 pt-3 text-[15px] leading-relaxed text-slate-600 dark:border-indigo-500/20 dark:text-slate-300">
-                  {entity.function}
-                </p>
-              )}
-              <div className="mt-4">
-                <SaveToProject
-                  result={{
-                    id: entity.accession,
-                    name: entity.name,
-                    database: 'UniProt',
-                    description: entity.protein_name,
-                    link: entity.links.uniprot,
-                    retrieved_at: entity.retrieved_at,
-                  }}
-                />
+          {isLoading && debounced && (
+            <div className="space-y-4">
+              <Skeleton className="h-36 rounded-xl" />
+              <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <Skeleton className="h-56 rounded-xl" />
+                <Skeleton className="h-56 rounded-xl" />
               </div>
             </div>
+          )}
 
-            {/* Gene records */}
-            {entity.genes_detail?.length > 0 && (
-              <Section icon={Dna} title="Gene" count={entity.genes_detail.length}>
-                <ul className="space-y-2">
-                  {entity.genes_detail.map((g) => (
-                    <li key={g.id} className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium">{g.name}</span>
-                        <p className="truncate text-xs text-slate-500">{g.description}</p>
+          {isError && (
+            <Card className="border-warn/30 bg-warn-soft p-4">
+              <div className="flex gap-3">
+                <AlertCircle size={16} className="mt-0.5 shrink-0 text-warn" />
+                <div>
+                  <p className="text-[13px] font-semibold text-ink">
+                    {error?.response?.status === 404
+                      ? `No entry found for “${debounced}”`
+                      : 'Could not reach the database'}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-ink-2">
+                    {error?.response?.status === 404
+                      ? 'Try an official gene symbol such as BRCA1, or a full protein name.'
+                      : 'The source APIs may be slow or temporarily unavailable. Try again shortly.'}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {entity && !isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18 }}
+              className="space-y-4"
+            >
+              {/* Identity */}
+              <Card className="overflow-hidden">
+                <div className="border-b border-line bg-surface-2/50 px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                        <SourceBadge source="UniProt" />
+                        <span className="font-mono text-[11px] text-ink-3">
+                          {entity.accession}
+                        </span>
                       </div>
+                      <h2 className="font-display text-[20px] font-semibold leading-tight text-ink">
+                        {entity.protein_name || entity.name}
+                      </h2>
+                      <p className="mt-1 text-[13px] text-ink-2">
+                        <em className="not-italic text-ink-2">{entity.organism}</em>
+                        {entity.genes?.length > 0 && (
+                          <>
+                            {' · '}
+                            <span className="font-mono text-[12px]">
+                              {entity.genes.join(', ')}
+                            </span>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <SaveToProject
+                        result={{
+                          id: entity.accession,
+                          name: entity.name,
+                          database: 'UniProt',
+                          description: entity.protein_name,
+                          link: entity.links.uniprot,
+                          retrieved_at: entity.retrieved_at,
+                        }}
+                      />
                       <a
-                        href={g.link}
+                        href={entity.links.uniprot}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 text-xs text-indigo-500 hover:underline"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-[13px] font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                       >
-                        NCBI {g.id}
+                        UniProt <ExternalLink size={13} />
                       </a>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-            {/* Sequence */}
-            {entity.sequence?.value && (
-              <Section icon={FlaskConical} title="Sequence">
-                <SequenceBlock
-                  sequence={{ ...entity.sequence, header: `${entity.accession}|${entity.name}` }}
-                />
-              </Section>
-            )}
-
-            {/* Structures */}
-            {entity.structures?.length > 0 && (
-              <Section icon={Boxes} title="Structures" count={entity.structures.length}>
-                <div className="flex flex-wrap gap-1.5">
-                  {entity.structures.map((s) => (
-                    <a
-                      key={s.id}
-                      href={s.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-md border border-slate-200 px-2 py-1 font-mono text-xs text-slate-600 transition-colors hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300"
-                    >
-                      {s.id}
-                    </a>
-                  ))}
+                    </div>
+                  </div>
                 </div>
-              </Section>
-            )}
 
-            {/* Pathways */}
-            {entity.pathways?.length > 0 && (
-              <Section icon={Waypoints} title="Pathways" count={entity.pathways.length}>
-                <div className="flex flex-wrap gap-1.5">
-                  {entity.pathways.map((p) => (
-                    <a
-                      key={p.id}
-                      href={p.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-md border border-slate-200 px-2 py-1 font-mono text-xs text-slate-600 hover:border-amber-400 hover:text-amber-600 dark:border-slate-700 dark:text-slate-300"
-                    >
-                      {p.id}
-                    </a>
-                  ))}
+                {entity.function && (
+                  <div className="px-5 py-4">
+                    <p className="font-display text-[15px] leading-[1.65] text-ink-2">
+                      {entity.function}
+                    </p>
+                  </div>
+                )}
+              </Card>
+
+              <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+                <div className="space-y-4">
+                  <SequenceCard entity={entity} />
+
+                  {entity.structures?.length > 0 && (
+                    <Card>
+                      <CardHeader
+                        title="Structures"
+                        icon={Boxes}
+                        count={entity.structures.length}
+                        subtitle="Experimentally solved, via PDB"
+                      />
+                      <div className="flex max-h-52 flex-wrap gap-1.5 overflow-y-auto p-4">
+                        {entity.structures.map((s) => (
+                          <Chip key={s.id} href={s.link} target="_blank" rel="noopener noreferrer">
+                            {s.id}
+                          </Chip>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
                 </div>
-              </Section>
-            )}
 
-            {entity.retrieved_at && (
-              <p className="px-1 text-[11px] text-slate-400">
-                Retrieved {new Date(entity.retrieved_at).toLocaleString()} from UniProt
-                {entity.genes_detail?.length ? ', NCBI Gene' : ''}
-              </p>
-            )}
-          </motion.div>
-        )}
-      </div>
-    </div>
+                <div className="space-y-4">
+                  {entity.genes_detail?.length > 0 && (
+                    <Card>
+                      <CardHeader title="Gene" icon={Dna} />
+                      <ul className="divide-y divide-line">
+                        {entity.genes_detail.map((g) => (
+                          <li key={g.id} className="px-4 py-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-mono text-[13px] font-medium text-ink">
+                                {g.name}
+                              </span>
+                              <SourceBadge source="NCBI Gene" />
+                            </div>
+                            <p className="mt-1 text-[12px] leading-relaxed text-ink-2">
+                              {g.description}
+                            </p>
+                            <a
+                              href={g.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1.5 inline-flex items-center gap-1 font-mono text-[11px] text-accent hover:underline"
+                            >
+                              Gene ID {g.id} <ExternalLink size={10} />
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </Card>
+                  )}
+
+                  {entity.pathways?.length > 0 && (
+                    <Card>
+                      <CardHeader
+                        title="Pathways"
+                        icon={Waypoints}
+                        count={entity.pathways.length}
+                      />
+                      <div className="flex flex-wrap gap-1.5 p-4">
+                        {entity.pathways.map((p) => (
+                          <Chip key={p.id} href={p.link} target="_blank" rel="noopener noreferrer">
+                            {p.id}
+                          </Chip>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              </div>
+
+              {entity.retrieved_at && (
+                <p className="pb-2 text-[11px] text-ink-3">
+                  Retrieved {new Date(entity.retrieved_at).toLocaleString()} from UniProt
+                  {entity.genes_detail?.length ? ' and NCBI Gene' : ''}. Identifiers
+                  cross-checked between sources.
+                </p>
+              )}
+            </motion.div>
+          )}
+        </div>
+      </Scroller>
+    </>
   )
 }

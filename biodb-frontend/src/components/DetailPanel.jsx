@@ -1,35 +1,33 @@
+import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ExternalLink, X, Copy, Check } from 'lucide-react'
-import { useState } from 'react'
-import { colorFor } from '../lib/databaseMeta'
-import { ACCENT } from '../lib/colorClasses'
+import { ExternalLink, X, Copy, Check, Boxes } from 'lucide-react'
 import { SaveToProject } from './SaveToProject'
+import { SourceBadge } from './ui'
 
-function CopyId({ id }) {
+function CopyValue({ value }) {
   const [copied, setCopied] = useState(false)
   return (
     <button
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(id)
+          await navigator.clipboard.writeText(value)
           setCopied(true)
-          setTimeout(() => setCopied(false), 1200)
+          setTimeout(() => setCopied(false), 1400)
         } catch {
-          // clipboard unavailable — ignore
+          /* clipboard unavailable */
         }
       }}
-      className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-100"
+      className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 font-mono text-[11px] text-ink-2 transition-colors hover:border-accent hover:text-accent"
     >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-      {id}
+      {copied ? <Check size={11} className="text-ok" /> : <Copy size={11} />}
+      {value}
     </button>
   )
 }
 
 export function DetailPanel({ result, open, onOpenChange }) {
   if (!result) return null
-  const accent = ACCENT[colorFor(result._database)] || ACCENT.slate
   const isPdb = result.database === 'PDB'
 
   return (
@@ -39,72 +37,79 @@ export function DetailPanel({ result, open, onOpenChange }) {
           <Dialog.Portal forceMount>
             <Dialog.Overlay asChild>
               <motion.div
-                className="fixed inset-0 z-40 bg-black/30"
+                className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               />
             </Dialog.Overlay>
             <Dialog.Content asChild forceMount aria-describedby={undefined}>
               <motion.div
-                className={`fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 ${
-                  isPdb ? 'max-w-2xl' : 'max-w-md'
+                className={`fixed right-0 top-0 z-50 flex h-full w-full flex-col border-l border-line bg-surface shadow-pop ${
+                  isPdb ? 'max-w-3xl' : 'max-w-md'
                 }`}
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                transition={{ type: 'spring', damping: 32, stiffness: 340 }}
               >
-                <div className="flex items-start justify-between gap-3 border-b border-slate-200 p-5 dark:border-slate-800">
-                  <div>
-                    <Dialog.Title className="text-base font-semibold">{result.name}</Dialog.Title>
-                    <span
-                      className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${accent.bgSoft} ${accent.text}`}
-                    >
-                      {result.database}
-                    </span>
+                <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+                  <div className="min-w-0">
+                    <div className="mb-1.5">
+                      <SourceBadge source={result.database} />
+                    </div>
+                    <Dialog.Title className="font-display text-[17px] font-semibold leading-tight text-ink">
+                      {result.name}
+                    </Dialog.Title>
                   </div>
-                  <Dialog.Close className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
-                    <X size={18} />
+                  <Dialog.Close className="rounded-md p-1.5 text-ink-3 transition-colors hover:bg-surface-2 hover:text-ink">
+                    <X size={16} />
                   </Dialog.Close>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5">
+                <div className="min-h-0 flex-1 overflow-y-auto">
                   {isPdb && (
-                    <div className="mb-5 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+                    <div className="border-b border-line">
+                      <div className="flex items-center gap-2 px-5 pb-2 pt-3">
+                        <Boxes size={13} className="text-ink-3" />
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                          Structure
+                        </span>
+                      </div>
                       <iframe
                         title={`3D structure ${result.id}`}
                         src={`https://molstar.org/viewer/?pdb=${result.id}&hide-controls=1&collapse-left-panel=1`}
-                        className="h-96 w-full"
+                        className="h-[420px] w-full border-t border-line"
                         loading="lazy"
                       />
                     </div>
                   )}
 
-                  <dl className="space-y-4 text-sm">
+                  <dl className="space-y-4 px-5 py-4">
                     <div>
-                      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
                         Description
                       </dt>
-                      <dd className="mt-1 text-slate-700 dark:text-slate-300">
+                      <dd className="mt-1.5 text-[13px] leading-relaxed text-ink-2">
                         {result.description || 'No description available.'}
                       </dd>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                        ID
+                    <div>
+                      <dt className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                        Identifier
                       </dt>
                       <dd>
-                        <CopyId id={result.id} />
+                        <CopyValue value={result.id} />
                       </dd>
                     </div>
                     {result.retrieved_at && (
                       <div>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Retrieved
+                        <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                          Provenance
                         </dt>
-                        <dd className="mt-1 text-xs text-slate-500">
-                          {new Date(result.retrieved_at).toLocaleString()} from{' '}
+                        <dd className="mt-1 text-[12px] text-ink-3">
+                          Retrieved {new Date(result.retrieved_at).toLocaleString()} from{' '}
                           {result.database}
                         </dd>
                       </div>
@@ -112,15 +117,15 @@ export function DetailPanel({ result, open, onOpenChange }) {
                   </dl>
                 </div>
 
-                <div className="space-y-2 border-t border-slate-200 p-5 dark:border-slate-800">
+                <div className="flex items-center gap-2 border-t border-line px-5 py-4">
                   <SaveToProject result={result} />
                   <a
                     href={result.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${accent.bg} transition-opacity hover:opacity-90`}
+                    className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent px-4 text-[13px] font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
                   >
-                    Open on {result.database} <ExternalLink size={14} />
+                    Open on {result.database} <ExternalLink size={13} />
                   </a>
                 </div>
               </motion.div>

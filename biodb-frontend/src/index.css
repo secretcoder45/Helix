@@ -2,19 +2,134 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-  --font-sans: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
-}
+/* ---------------------------------------------------------------------------
+   Design tokens
+
+   Defined as CSS variables on :root/.dark so a single class flip re-themes the
+   whole app, then exposed to Tailwind via `@theme inline` (which emits
+   `var(--x)` in utilities rather than baking in a static value — the part that
+   makes theme switching actually work).
+
+   Palette is warm — paper/clay rather than the cool blue-gray SaaS default —
+   for a tool meant to feel like a considered instrument, not a dashboard.
+--------------------------------------------------------------------------- */
 
 :root {
   color-scheme: light;
-}
-.dark {
-  color-scheme: dark;
+
+  --paper: #faf9f7;
+  --surface: #ffffff;
+  --surface-2: #f4f2ee;
+  --surface-3: #ebe8e2;
+
+  --border: #e6e3dc;
+  --border-strong: #d4d0c7;
+
+  --text: #1c1b19;
+  --text-2: #6a665e;
+  --text-3: #97928a;
+
+  --accent: #bd5c38;
+  --accent-hover: #a44a29;
+  --accent-contrast: #ffffff;
+  --accent-soft: #fbefe9;
+  --accent-line: #eccdbd;
+
+  --ok: #3f7d5c;
+  --ok-soft: #eaf3ee;
+  --warn: #9a6a1f;
+  --warn-soft: #fbf1de;
+  --danger: #a3402f;
+  --danger-soft: #fbecea;
+
+  /* Source marks — one per database, used as small dots and badge text.
+     Muted to sit inside the warm palette instead of fighting it. */
+  --src-uniprot: #4a6fa5;
+  --src-pdb: #6f5aa6;
+  --src-ncbi: #3f7d5c;
+  --src-kegg: #9a6a1f;
+
+  --shadow-sm: 0 1px 2px rgb(28 27 25 / 0.05);
+  --shadow: 0 1px 3px rgb(28 27 25 / 0.07), 0 4px 12px -2px rgb(28 27 25 / 0.05);
+  --shadow-lg: 0 8px 24px -4px rgb(28 27 25 / 0.12), 0 2px 8px -2px rgb(28 27 25 / 0.06);
 }
 
+.dark {
+  color-scheme: dark;
+
+  --paper: #171614;
+  --surface: #1f1e1b;
+  --surface-2: #272522;
+  --surface-3: #322f2b;
+
+  --border: #322f2b;
+  --border-strong: #453f39;
+
+  --text: #f2f0ec;
+  --text-2: #a49e95;
+  --text-3: #78726a;
+
+  --accent: #d97a52;
+  --accent-hover: #e58c66;
+  --accent-contrast: #171614;
+  --accent-soft: rgb(217 122 82 / 0.13);
+  --accent-line: rgb(217 122 82 / 0.3);
+
+  --ok: #6bb08a;
+  --ok-soft: rgb(107 176 138 / 0.13);
+  --warn: #d0a355;
+  --warn-soft: rgb(208 163 85 / 0.13);
+  --danger: #d97a6c;
+  --danger-soft: rgb(217 122 108 / 0.13);
+
+  --src-uniprot: #7fa3d6;
+  --src-pdb: #a08fd4;
+  --src-ncbi: #6bb08a;
+  --src-kegg: #d0a355;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 12px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 8px 24px -4px rgb(0 0 0 / 0.5), 0 2px 8px -2px rgb(0 0 0 / 0.35);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+
+  --color-ink: var(--text);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --shadow-card: var(--shadow);
+  --shadow-pop: var(--shadow-lg);
+}
+
+/* --------------------------------------------------------------------------- */
+
 html {
-  /* cv11/ss01 were Inter-specific stylistic sets; not applicable to a serif */
+  font-feature-settings: "cv11", "ss01", "tnum" 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -23,17 +138,66 @@ html {
 body {
   margin: 0;
   font-family: var(--font-sans);
-  @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  background: var(--paper);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-h1, h2, h3 {
-  letter-spacing: -0.015em;
+/* Display type: serif, tightened. Used for page titles and entity names —
+   the editorial moments — while UI chrome stays sans for legibility at
+   small sizes. */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.011em;
+}
+
+/* Numeric columns should align; tabular figures make IDs and counts scan. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
 }
 
 * {
   scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 6px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Focus: visible and consistent, never removed. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 kbd {
-  @apply inline-flex items-center justify-center rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-mono text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
 }

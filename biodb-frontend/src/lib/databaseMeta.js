@@ -1,19 +1,17 @@
 import { Dna, FlaskConical, Network, Waypoints, Pill, Database as DatabaseIcon } from 'lucide-react'
 
-// Visual metadata per database category — icon + accent color.
-// Keyed by the same keys the backend's /databases endpoint returns.
-export const DB_META = {
-  genomics: { icon: Dna, color: 'emerald' },
-  proteins: { icon: FlaskConical, color: 'indigo' },
-  pathways: { icon: Waypoints, color: 'amber' },
-  sequences: { icon: Network, color: 'sky' },
-  drugs: { icon: Pill, color: 'rose' },
+// Icon per database category, keyed to what the backend's /databases endpoint
+// returns. Colour now lives in the design tokens (see SourceBadge), keyed by
+// source database rather than category — a protein search returns both UniProt
+// and PDB rows, and those should stay visually distinguishable.
+export const DB_ICONS = {
+  genomics: Dna,
+  proteins: FlaskConical,
+  pathways: Waypoints,
+  sequences: Network,
+  drugs: Pill,
 }
 
 export function iconFor(key) {
-  return DB_META[key]?.icon || DatabaseIcon
-}
-
-export function colorFor(key) {
-  return DB_META[key]?.color || 'slate'
+  return DB_ICONS[key] || DatabaseIcon
 }
