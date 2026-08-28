@@ -36,18 +36,22 @@ function formatEvalue(e) {
   return e.toFixed(3)
 }
 
-function Elapsed({ since }) {
+function useElapsedSeconds(since) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
+    if (!since) return
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
-  }, [])
-  const secs = Math.floor((now - since) / 1000)
-  const mins = Math.floor(secs / 60)
+  }, [since])
+  return since ? Math.floor((now - since) / 1000) : 0
+}
+
+function Elapsed({ seconds }) {
+  const mins = Math.floor(seconds / 60)
   return (
     <span className="tnum">
       {mins > 0 ? `${mins}m ` : ''}
-      {secs % 60}s
+      {seconds % 60}s
     </span>
   )
 }
@@ -236,6 +240,8 @@ export function BlastPage() {
     }))
 
   const running = Boolean(rid) && !ready && status !== 'FAILED'
+  const elapsedSeconds = useElapsedSeconds(startedAt)
+  const unusuallySlow = running && elapsedSeconds > 180 // NCBI's own site typically clears WAITING well under this
 
   return (
     <>
@@ -336,13 +342,32 @@ export function BlastPage() {
                 <Loader2 size={16} className="mt-0.5 shrink-0 animate-spin text-accent" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-medium text-ink">
-                    Search queued at NCBI · running {startedAt && <Elapsed since={startedAt} />}
+                    Search queued at NCBI · running <Elapsed seconds={elapsedSeconds} />
                   </p>
                   <p className="mt-1 text-[12px] leading-relaxed text-ink-2">
                     BLAST searches take anywhere from under a minute to several minutes
                     depending on NCBI's queue and the database size. This page keeps polling —
                     the search ID is in the URL, so you can close the tab and come back to it.
                   </p>
+
+                  {unusuallySlow && (
+                    <div className="mt-3 rounded-lg border border-warn/30 bg-warn-soft p-3">
+                      <p className="text-[12px] leading-relaxed text-ink">
+                        This is taking longer than usual — Swiss-Prot searches typically finish
+                        in well under this time. NCBI's own servers appear to be under heavy
+                        load right now, not a problem with this search specifically.
+                      </p>
+                      <a
+                        href={`https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Get&FORMAT_OBJECT=SearchInfo&RID=${rid}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1.5 inline-block text-[11px] font-medium text-accent hover:underline"
+                      >
+                        Check this search directly on NCBI's own site →
+                      </a>
+                    </div>
+                  )}
+
                   <p className="mt-2 font-mono text-[11px] text-ink-3">RID {rid}</p>
                 </div>
               </div>
