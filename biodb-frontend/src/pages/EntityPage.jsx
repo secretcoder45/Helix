@@ -161,7 +161,7 @@ export function EntityPage() {
                 </a>
               </div>
               {entity.function && (
-                <p className="mt-3 border-t border-indigo-200/60 pt-3 text-sm leading-relaxed text-slate-600 dark:border-indigo-500/20 dark:text-slate-300">
+                <p className="mt-3 border-t border-indigo-200/60 pt-3 font-serif text-[15px] leading-relaxed text-slate-600 dark:border-indigo-500/20 dark:text-slate-300">
                   {entity.function}
                 </p>
               )}
