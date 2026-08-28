@@ -13,6 +13,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 # returns "" (not None), which would otherwise break create_engine.
 DATABASE_URL = os.getenv("DATABASE_URL") or "sqlite:///./biodb.sqlite3"
 
+# Heroku-style providers (Railway included) sometimes hand out postgres:// URLs.
+# SQLAlchemy 2.x dropped that alias and errors on it, so normalise to the
+# dialect name it expects.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # SQLite needs this flag for use with FastAPI's threaded request handling;
 # Postgres and other real DBs ignore it.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}

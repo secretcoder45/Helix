@@ -49,9 +49,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Unified Bioinformatics Database", lifespan=lifespan)
 
 # Enable CORS for frontend
+# Origins come from the environment so the deployed frontend isn't blocked.
+# ALLOWED_ORIGINS is a comma-separated list (set it to the Vercel URL in
+# production); the localhost defaults keep local development working with no
+# configuration.
+_DEFAULT_ORIGINS = "http://localhost:5173,http://localhost:3000"
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in (os.getenv("ALLOWED_ORIGINS") or _DEFAULT_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -520,4 +531,5 @@ def _serialize_project(project: models.Project, include_items: bool = False) -> 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Railway (and most PaaS) inject the port to bind as $PORT.
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
