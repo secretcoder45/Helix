@@ -183,6 +183,15 @@ export function usePhylo() {
   })
 }
 
+export function useRestriction() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/restriction', payload)
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

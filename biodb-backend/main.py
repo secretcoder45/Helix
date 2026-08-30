@@ -21,6 +21,7 @@ import alignment_service
 import protein_properties
 import dna_service
 import phylo_service
+import restriction_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -156,6 +157,12 @@ class PhyloRequest(BaseModel):
     matrix: str = "BLOSUM62"
     gap_open: float = -10.0
     gap_extend: float = -0.5
+
+
+class RestrictionRequest(BaseModel):
+    sequence: str
+    enzymes: Optional[List[str]] = None
+    circular: bool = False
 
 
 class DnaRequest(BaseModel):
@@ -609,6 +616,17 @@ def phylo_build(payload: PhyloRequest):
     except phylo_service.PhyloError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except alignment_service.AlignmentError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/restriction")
+def restriction_map(payload: RestrictionRequest):
+    """Restriction sites, fragments and a predicted digest."""
+    try:
+        return restriction_service.analyse(
+            payload.sequence, enzymes=payload.enzymes, circular=payload.circular
+        )
+    except restriction_service.RestrictionError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
