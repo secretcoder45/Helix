@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, Rows3, Dna, GitCompareArrows, Sparkles, FolderOpen, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
+import { Link2, Rows3, Dna, GitCompareArrows, FlaskConical, Sparkles, FolderOpen, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
 import { iconFor } from '../lib/databaseMeta'
 import { useEntity } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
@@ -45,6 +45,7 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
     { to: '/batch', icon: Rows3, label: 'Batch lookup' },
     { to: '/blast', icon: Dna, label: 'BLAST search' },
     { to: '/align', icon: GitCompareArrows, label: 'Pairwise alignment' },
+    { to: '/properties', icon: FlaskConical, label: 'Protein properties' },
     { to: '/chat', icon: Sparkles, label: 'Assistant' },
     { to: '/projects', icon: FolderOpen, label: 'Projects' },
   ]

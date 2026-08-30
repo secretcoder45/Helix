@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { GitCompareArrows, Play, Copy, Check, ChevronDown, AlertTriangle, FlaskConical } from 'lucide-react'
 import { useAlign } from '../lib/api'
 import { SaveAlignmentToProject } from '../components/SaveAlignmentToProject'
+import { AlignmentViewer } from '../components/AlignmentViewer'
 import { Button, Card, EmptyState, PageHeader, Scroller } from '../components/ui'
 
 const SAMPLE_1 = 'MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN'
@@ -28,44 +29,6 @@ function CopyButton({ text, label }) {
       {copied ? <Check size={11} className="text-ok" /> : <Copy size={11} />}
       {copied ? 'Copied' : label}
     </button>
-  )
-}
-
-function AlignmentViewer({ result }) {
-  // Break the alignment into fixed-width chunks (like real alignment tools do)
-  // so it wraps legibly instead of one unreadable horizontal strip.
-  const WIDTH = 60
-  const chunks = useMemo(() => {
-    const { aligned_seq1, aligned_seq2 } = result
-    const rows = []
-    for (let i = 0; i < aligned_seq1.length; i += WIDTH) {
-      const a = aligned_seq1.slice(i, i + WIDTH)
-      const b = aligned_seq2.slice(i, i + WIDTH)
-      const mid = [...a].map((c, j) => (c === b[j] && c !== '-' ? '|' : c === '-' || b[j] === '-' ? ' ' : '.')).join('')
-      rows.push({ start: i + 1, a, mid, b })
-    }
-    return rows
-  }, [result])
-
-  return (
-    <div className="overflow-x-auto rounded-lg bg-surface-2/40 p-4">
-      {chunks.map((chunk, i) => (
-        <div key={i} className={`font-mono text-[12px] leading-[1.6] ${i > 0 ? 'mt-3' : ''}`}>
-          <div className="flex gap-3">
-            <span className="tnum w-10 shrink-0 text-right text-ink-3">{chunk.start}</span>
-            <span className="whitespace-pre text-ink">{chunk.a}</span>
-          </div>
-          <div className="flex gap-3">
-            <span className="w-10 shrink-0" />
-            <span className="whitespace-pre text-accent">{chunk.mid}</span>
-          </div>
-          <div className="flex gap-3">
-            <span className="w-10 shrink-0" />
-            <span className="whitespace-pre text-ink">{chunk.b}</span>
-          </div>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -393,7 +356,7 @@ export function AlignPage() {
                 </div>
 
                 <div className="p-4">
-                  <AlignmentViewer result={result} />
+                  <AlignmentViewer result={result} label1={label1} label2={label2} />
                 </div>
               </Card>
             </motion.div>

@@ -156,6 +156,15 @@ export function useRemoveAlignment() {
   })
 }
 
+export function useProperties() {
+  return useMutation({
+    mutationFn: async (sequence) => {
+      const { data } = await client.post('/properties', { sequence })
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

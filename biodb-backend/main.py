@@ -18,6 +18,7 @@ from llm_service import llm
 import xml.etree.ElementTree as ET
 import blast_service
 import alignment_service
+import protein_properties
 from cache import cache_stats
 import db as db_module
 import models
@@ -135,6 +136,10 @@ class AlignRequest(BaseModel):
     gap_extend: float = -0.5
     match_score: float = 5.0
     mismatch_score: float = -4.0
+
+
+class PropertiesRequest(BaseModel):
+    sequence: str
 
 
 class SavedAlignmentCreate(BaseModel):
@@ -543,6 +548,15 @@ def get_sequence(accession: str):
     if not seq:
         raise HTTPException(status_code=404, detail=f"No sequence found for '{accession}'")
     return seq
+
+
+@app.post("/properties")
+def protein_props(payload: PropertiesRequest):
+    """Physicochemical properties plus the titration curve, computed locally."""
+    try:
+        return protein_properties.analyse(payload.sequence)
+    except protein_properties.PropertyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---- BLAST ----

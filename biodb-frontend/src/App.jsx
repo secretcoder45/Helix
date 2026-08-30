@@ -11,6 +11,7 @@ import { ProjectsPage } from './pages/ProjectsPage'
 import { BatchPage } from './pages/BatchPage'
 import { BlastPage } from './pages/BlastPage'
 import { AlignPage } from './pages/AlignPage'
+import { PropertiesPage } from './pages/PropertiesPage'
 import { SearchPage } from './pages/SearchPage'
 import { LogoMark } from './components/Logo'
 
@@ -103,6 +104,7 @@ function App() {
           <Route path="/batch" element={<BatchPage />} />
           <Route path="/blast" element={<BlastPage />} />
           <Route path="/align" element={<AlignPage />} />
+          <Route path="/properties" element={<PropertiesPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/db/:database" element={<SearchPage databases={databases} />} />

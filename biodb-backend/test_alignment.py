@@ -235,3 +235,75 @@ def test_local_rejects_bad_input():
         smith_waterman("ACDE", "ACDE", gap_open=5)
     with pytest.raises(AlignmentError):
         smith_waterman("A" * (MAX_SEQUENCE_LENGTH + 1), "ACDE")
+
+
+# ---- Protein properties ----
+
+import protein_properties as pp
+
+INSULIN = (
+    'MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQ'
+    'VELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN'
+)
+
+
+def test_titration_curve_crosses_zero_at_the_reported_pi():
+    """
+    The invariant that makes the curve and the pI the same model rather than
+    two independent guesses: net charge must be ~0 exactly at the isoelectric
+    point, positive below it and negative above it.
+    """
+    r = pp.analyse(INSULIN)
+    pi = r["isoelectric_point"]
+    curve = {p["ph"]: p["charge"] for p in r["titration_curve"]}
+
+    nearest = min(curve, key=lambda ph: abs(ph - pi))
+    assert abs(curve[nearest]) < 0.5, f"charge at pI should be ~0, got {curve[nearest]}"
+
+    # Proteins are positively charged below their pI and negative above it.
+    assert curve[round(max(0.0, pi - 2), 1)] > 0
+    assert curve[round(min(14.0, pi + 2), 1)] < 0
+
+
+def test_titration_curve_is_monotonically_decreasing():
+    # More acidic -> more protonated -> more positive. The curve can plateau
+    # but must never rise as pH increases.
+    r = pp.analyse(INSULIN)
+    charges = [p["charge"] for p in r["titration_curve"]]
+    assert all(b <= a + 1e-6 for a, b in zip(charges, charges[1:]))
+
+
+def test_properties_match_biopython_reference():
+    r = pp.analyse(INSULIN)
+    assert r["length"] == 110
+    assert r["molecular_weight"] == pytest.approx(11980.79, abs=0.1)
+    assert r["isoelectric_point"] == pytest.approx(5.22, abs=0.01)
+    assert r["gravy"] == pytest.approx(0.1927, abs=0.001)
+    # Instability index > 40 predicts an unstable protein
+    assert r["stable"] is (r["instability_index"] <= 40)
+
+
+def test_properties_strips_fasta_header():
+    with_header = ">sp|P01308|INS_HUMAN Insulin\n" + INSULIN[:60] + "\n" + INSULIN[60:]
+    assert pp.analyse(with_header)["length"] == 110
+
+
+def test_properties_rejects_non_standard_residues():
+    with pytest.raises(pp.PropertyError) as e:
+        pp.analyse("ACDEFGHIKXZBACDEFGHIK")
+    # The message should name the offending residues, not just fail
+    assert "X" in str(e.value)
+
+
+def test_properties_rejects_too_short():
+    with pytest.raises(pp.PropertyError):
+        pp.analyse("AC")
+
+
+def test_properties_endpoint(client):
+    res = client.post("/properties", json={"sequence": INSULIN}).json()
+    assert res["length"] == 110
+    assert len(res["titration_curve"]) == 141
+
+    bad = client.post("/properties", json={"sequence": "AC"})
+    assert bad.status_code == 400
