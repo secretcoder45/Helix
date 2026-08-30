@@ -174,6 +174,15 @@ export function useDna() {
   })
 }
 
+export function usePhylo() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/phylo', payload)
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

@@ -20,6 +20,7 @@ import blast_service
 import alignment_service
 import protein_properties
 import dna_service
+import phylo_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -141,6 +142,20 @@ class AlignRequest(BaseModel):
 
 class PropertiesRequest(BaseModel):
     sequence: str
+
+
+class PhyloSequence(BaseModel):
+    label: str = ""
+    sequence: str
+
+
+class PhyloRequest(BaseModel):
+    sequences: List[PhyloSequence]
+    method: str = "nj"
+    sequence_type: str = "protein"
+    matrix: str = "BLOSUM62"
+    gap_open: float = -10.0
+    gap_extend: float = -0.5
 
 
 class DnaRequest(BaseModel):
@@ -576,6 +591,24 @@ def dna_analyse(payload: DnaRequest):
             gc_window=max(5, payload.gc_window),
         )
     except dna_service.DnaError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/phylo")
+def phylo_build(payload: PhyloRequest):
+    """Pairwise distance matrix and a tree, from this app's own aligner."""
+    try:
+        return phylo_service.build(
+            [s.model_dump() for s in payload.sequences],
+            method=payload.method,
+            sequence_type=payload.sequence_type,
+            matrix=payload.matrix,
+            gap_open=payload.gap_open,
+            gap_extend=payload.gap_extend,
+        )
+    except phylo_service.PhyloError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except alignment_service.AlignmentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 

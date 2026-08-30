@@ -6,6 +6,8 @@ import {
   Dna,
   GitCompareArrows,
   FlaskConical,
+  Grid3x3,
+  GitBranch,
   Sparkles,
   FolderOpen,
   Search,
@@ -103,6 +105,8 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             <NavItem to="/align" icon={GitCompareArrows} label="Alignment" collapsed={collapsed} />
             <NavItem to="/properties" icon={FlaskConical} label="Properties" collapsed={collapsed} />
             <NavItem to="/dna" icon={Dna} label="DNA toolkit" collapsed={collapsed} />
+            <NavItem to="/compare" icon={Grid3x3} label="Dot plot" collapsed={collapsed} />
+            <NavItem to="/phylo" icon={GitBranch} label="Phylogeny" collapsed={collapsed} />
             <NavItem to="/chat" icon={Sparkles} label="Assistant" collapsed={collapsed} />
             <NavItem to="/projects" icon={FolderOpen} label="Projects" collapsed={collapsed} />
           </div>
