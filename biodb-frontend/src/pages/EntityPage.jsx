@@ -18,6 +18,8 @@ import { useEntity, useLiterature } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
 import { AddToTrayButton } from '../components/SequenceTrayUI'
+import { SequenceViewer } from '../components/SequenceViewer'
+import { useSequenceTray } from '../context/SequenceTray'
 import {
   Card,
   CardHeader,
@@ -57,6 +59,7 @@ function Stat({ label, value, mono }) {
 
 function SequenceCard({ entity }) {
   const [copied, copy] = useCopy()
+  const { add } = useSequenceTray()
   const seq = entity.sequence
   if (!seq?.value) return null
 
@@ -97,9 +100,14 @@ function SequenceCard({ entity }) {
         <Stat label="Mass" value={`${(seq.molecular_weight / 1000).toFixed(1)} kDa`} mono />
         <Stat label="Accession" value={entity.accession} mono />
       </div>
-      <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-all px-4 py-3 font-mono text-[11px] leading-[1.7] text-ink-2">
-        {seq.value}
-      </pre>
+      <div className="p-4">
+        <SequenceViewer
+          sequence={seq.value}
+          label={entity.name}
+          accession={entity.accession}
+          onSelectionToTray={add}
+        />
+      </div>
     </Card>
   )
 }

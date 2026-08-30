@@ -49,6 +49,34 @@
   --src-ncbi: #3f7d5c;
   --src-kegg: #9a6a1f;
 
+  /* Residue colours.
+
+     Class = categorical, 4 slots. Four rather than five because in a sequence
+     any residue can neighbour any other, so the all-pairs gate applies, and no
+     5-hue set from the ramp clears it in both modes (enumerated, not guessed).
+     Measured all-pairs: light CVD dE 13.0 / normal 19.6; dark CVD dE 6.9
+     (yellow<->green) / normal 19.3.
+
+     Dark's 6.9 sits in the 6-8 band, which is legal only with secondary
+     encoding, and light's magenta/yellow fall under 3:1 on white, which
+     requires relief. Both are satisfied the same way and unusually strongly
+     here: every coloured cell has its residue letter printed inside it, so
+     identity never rests on hue — that's a label on every single mark, not
+     just on selected ones. Fills are also drawn as low-alpha tints with ink
+     text over them, so rendered text contrast is set by the ink, not the hue.
+
+     Acidic/basic aren't lost by dropping to four — they're a polarity, not two
+     more categories, and the diverging charge mode below encodes them properly
+     (the documented blue <-> red pair with a neutral midpoint). */
+  --res-hydrophobic: #2a78d6;
+  --res-polar: #008300;
+  --res-charged: #e87ba4;
+  --res-special: #eda100;
+
+  --res-acidic: #e34948;
+  --res-basic: #2a78d6;
+  --res-neutral: #b9b6ae;
+
   --shadow-sm: 0 1px 2px rgb(28 27 25 / 0.05);
   --shadow: 0 1px 3px rgb(28 27 25 / 0.07), 0 4px 12px -2px rgb(28 27 25 / 0.05);
   --shadow-lg: 0 8px 24px -4px rgb(28 27 25 / 0.12), 0 2px 8px -2px rgb(28 27 25 / 0.06);
@@ -87,6 +115,15 @@
   --src-ncbi: #6bb08a;
   --src-kegg: #d0a355;
 
+  --res-hydrophobic: #3987e5;
+  --res-polar: #008300;
+  --res-charged: #d55181;
+  --res-special: #c98500;
+
+  --res-acidic: #e66767;
+  --res-basic: #3987e5;
+  --res-neutral: #55524c;
+
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 12px -2px rgb(0 0 0 / 0.3);
   --shadow-lg: 0 8px 24px -4px rgb(0 0 0 / 0.5), 0 2px 8px -2px rgb(0 0 0 / 0.35);
@@ -117,6 +154,14 @@
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+
+  --color-res-hydrophobic: var(--res-hydrophobic);
+  --color-res-polar: var(--res-polar);
+  --color-res-charged: var(--res-charged);
+  --color-res-special: var(--res-special);
+  --color-res-acidic: var(--res-acidic);
+  --color-res-basic: var(--res-basic);
+  --color-res-neutral: var(--res-neutral);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
