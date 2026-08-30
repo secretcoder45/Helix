@@ -102,6 +102,7 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             <NavItem to="/blast" icon={Dna} label="BLAST" collapsed={collapsed} />
             <NavItem to="/align" icon={GitCompareArrows} label="Alignment" collapsed={collapsed} />
             <NavItem to="/properties" icon={FlaskConical} label="Properties" collapsed={collapsed} />
+            <NavItem to="/dna" icon={Dna} label="DNA toolkit" collapsed={collapsed} />
             <NavItem to="/chat" icon={Sparkles} label="Assistant" collapsed={collapsed} />
             <NavItem to="/projects" icon={FolderOpen} label="Projects" collapsed={collapsed} />
           </div>

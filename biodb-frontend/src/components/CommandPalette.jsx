@@ -46,6 +46,7 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
     { to: '/blast', icon: Dna, label: 'BLAST search' },
     { to: '/align', icon: GitCompareArrows, label: 'Pairwise alignment' },
     { to: '/properties', icon: FlaskConical, label: 'Protein properties' },
+    { to: '/dna', icon: Dna, label: 'DNA toolkit' },
     { to: '/chat', icon: Sparkles, label: 'Assistant' },
     { to: '/projects', icon: FolderOpen, label: 'Projects' },
   ]

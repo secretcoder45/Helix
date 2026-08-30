@@ -165,6 +165,15 @@ export function useProperties() {
   })
 }
 
+export function useDna() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/dna', payload)
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

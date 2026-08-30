@@ -19,6 +19,7 @@ import xml.etree.ElementTree as ET
 import blast_service
 import alignment_service
 import protein_properties
+import dna_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -140,6 +141,12 @@ class AlignRequest(BaseModel):
 
 class PropertiesRequest(BaseModel):
     sequence: str
+
+
+class DnaRequest(BaseModel):
+    sequence: str
+    min_orf_aa: int = 30
+    gc_window: int = 50
 
 
 class SavedAlignmentCreate(BaseModel):
@@ -556,6 +563,19 @@ def protein_props(payload: PropertiesRequest):
     try:
         return protein_properties.analyse(payload.sequence)
     except protein_properties.PropertyError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/dna")
+def dna_analyse(payload: DnaRequest):
+    """Nucleotide analysis: composition, GC profile, six-frame translation, ORFs."""
+    try:
+        return dna_service.analyse(
+            payload.sequence,
+            min_orf_aa=max(1, payload.min_orf_aa),
+            gc_window=max(5, payload.gc_window),
+        )
+    except dna_service.DnaError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
