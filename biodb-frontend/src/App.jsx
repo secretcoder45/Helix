@@ -16,6 +16,8 @@ import { DnaPage } from './pages/DnaPage'
 import { ComparePage } from './pages/ComparePage'
 import { PhyloPage } from './pages/PhyloPage'
 import { RestrictionPage } from './pages/RestrictionPage'
+import { VariantPage } from './pages/VariantPage'
+import { PrimerPage } from './pages/PrimerPage'
 import { SearchPage } from './pages/SearchPage'
 import { LogoMark } from './components/Logo'
 
@@ -113,6 +115,8 @@ function App() {
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/phylo" element={<PhyloPage />} />
           <Route path="/restriction" element={<RestrictionPage />} />
+          <Route path="/variant" element={<VariantPage />} />
+          <Route path="/primers" element={<PrimerPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/db/:database" element={<SearchPage databases={databases} />} />

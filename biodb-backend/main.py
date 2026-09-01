@@ -22,6 +22,8 @@ import protein_properties
 import dna_service
 import phylo_service
 import restriction_service
+import variant_service
+import primer_service
 from cache import cache_stats
 import db as db_module
 import models
@@ -163,6 +165,23 @@ class RestrictionRequest(BaseModel):
     sequence: str
     enzymes: Optional[List[str]] = None
     circular: bool = False
+
+
+class VariantRequest(BaseModel):
+    gene: str
+    variant: str
+
+
+class PrimerRequest(BaseModel):
+    template: str
+    target_start: Optional[int] = None
+    target_end: Optional[int] = None
+    min_len: Optional[int] = None
+    max_len: Optional[int] = None
+    min_tm: Optional[float] = None
+    max_tm: Optional[float] = None
+    min_gc: Optional[float] = None
+    max_gc: Optional[float] = None
 
 
 class DnaRequest(BaseModel):
@@ -642,6 +661,34 @@ def restriction_map(payload: RestrictionRequest):
             payload.sequence, enzymes=payload.enzymes, circular=payload.circular
         )
     except restriction_service.RestrictionError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/variant")
+def variant_analyse(payload: VariantRequest):
+    """Assemble what is known about a missense substitution at one position."""
+    try:
+        return variant_service.analyse(payload.gene, payload.variant)
+    except variant_service.VariantError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/primers")
+def design_primers(payload: PrimerRequest):
+    """PCR primer pairs for a template, with nearest-neighbour Tm."""
+    try:
+        return primer_service.design(
+            payload.template,
+            target_start=payload.target_start,
+            target_end=payload.target_end,
+            min_len=payload.min_len,
+            max_len=payload.max_len,
+            min_tm=payload.min_tm,
+            max_tm=payload.max_tm,
+            min_gc=payload.min_gc,
+            max_gc=payload.max_gc,
+        )
+    except primer_service.PrimerError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 

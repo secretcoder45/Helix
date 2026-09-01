@@ -205,6 +205,24 @@ export function useAlphafold(accession) {
   })
 }
 
+export function useVariant() {
+  return useMutation({
+    mutationFn: async ({ gene, variant }) => {
+      const { data } = await client.post('/variant', { gene, variant })
+      return data
+    },
+  })
+}
+
+export function usePrimers() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/primers', payload)
+      return data
+    },
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

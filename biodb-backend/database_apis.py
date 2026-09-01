@@ -319,6 +319,56 @@ class DatabaseConnector:
             return []
 
     @staticmethod
+    @cached("variants")
+    def fetch_variants(accession: str, position: int = None) -> List[Dict]:
+        """
+        Curated natural variants for an accession, optionally at one position.
+
+        UniProt's variant annotations carry clinical significance and dbSNP
+        identifiers where they exist — BRCA1 alone has 170 — which is what
+        makes "is this position already known?" answerable rather than a
+        guess.
+        """
+        try:
+            r = requests.get(
+                f"https://rest.uniprot.org/uniprotkb/{accession}.json",
+                params={"fields": "ft_variant"},
+                timeout=12,
+            )
+            if r.status_code != 200:
+                return []
+
+            out = []
+            for f in r.json().get("features", []):
+                if f.get("type") != "Natural variant":
+                    continue
+                start = (f.get("location", {}).get("start") or {}).get("value")
+                if start is None:
+                    continue
+                if position is not None and start != position:
+                    continue
+                xrefs = [
+                    x.get("id")
+                    for x in (f.get("featureCrossReferences") or [])
+                    if x.get("database") == "dbSNP"
+                ]
+                out.append(
+                    {
+                        "position": start,
+                        "description": f.get("description", ""),
+                        "alternative": (f.get("alternativeSequence") or {}).get(
+                            "alternativeSequences", [None]
+                        )[0],
+                        "original": (f.get("alternativeSequence") or {}).get("originalSequence"),
+                        "dbsnp": xrefs[0] if xrefs else None,
+                    }
+                )
+            return out
+        except Exception as e:
+            print(f"Variant fetch error: {e}")
+            return []
+
+    @staticmethod
     @cached("alphafold")
     def fetch_alphafold(accession: str) -> Dict:
         """

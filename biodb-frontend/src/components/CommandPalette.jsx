@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, Rows3, Dna, GitCompareArrows, FlaskConical, Grid3x3, GitBranch, Scissors, Sparkles, FolderOpen, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
+import { Link2, Rows3, Dna, GitCompareArrows, FlaskConical, Grid3x3, GitBranch, Scissors, ShieldAlert, Microscope, Sparkles, FolderOpen, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
 import { iconFor } from '../lib/databaseMeta'
 import { useEntity } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
@@ -47,6 +47,8 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
     { to: '/align', icon: GitCompareArrows, label: 'Pairwise alignment' },
     { to: '/properties', icon: FlaskConical, label: 'Protein properties' },
     { to: '/dna', icon: Dna, label: 'DNA toolkit' },
+    { to: '/variant', icon: ShieldAlert, label: 'Variant analysis' },
+    { to: '/primers', icon: Microscope, label: 'Primer design' },
     { to: '/restriction', icon: Scissors, label: 'Restriction map' },
     { to: '/compare', icon: Grid3x3, label: 'Dot plot' },
     { to: '/phylo', icon: GitBranch, label: 'Phylogenetic tree' },
