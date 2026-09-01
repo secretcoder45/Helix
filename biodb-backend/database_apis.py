@@ -319,6 +319,67 @@ class DatabaseConnector:
             return []
 
     @staticmethod
+    @cached("alphafold")
+    def fetch_alphafold(accession: str) -> Dict:
+        """
+        AlphaFold predicted structure for an accession.
+
+        Matters because only a minority of proteins have an experimental PDB
+        entry — for everything else the structures panel would otherwise be
+        empty. The model URL can't be constructed by hand: it carries a
+        version that changes, so the API has to be asked.
+
+        pLDDT is the model's own per-residue confidence, and it is not
+        decoration — low-confidence regions are frequently genuinely
+        disordered rather than badly predicted, so the score has to travel
+        with the model rather than being dropped.
+        """
+        try:
+            r = requests.get(
+                f"https://alphafold.ebi.ac.uk/api/prediction/{accession}", timeout=12
+            )
+            if r.status_code != 200:
+                return {}
+            data = r.json()
+            if not data:
+                return {}
+            m = data[0]
+
+            # Per-residue confidence, fetched as well as the model URLs.
+            # Deliberately not a 3D embed: Mol*'s public viewer was verified
+            # not to load an arbitrary model URL (only `pdb`/`emdb` ids
+            # trigger a fetch), so an embed would have rendered an empty box.
+            # This is the more useful half of the prediction anyway — it says
+            # WHICH regions to trust, which the 3D view does not make obvious.
+            plddt = []
+            try:
+                doc = m.get("plddtDocUrl")
+                if doc:
+                    cr = requests.get(doc, timeout=12)
+                    if cr.status_code == 200:
+                        plddt = cr.json().get("confidenceScore", []) or []
+            except Exception:
+                plddt = []
+
+            mean_plddt = round(sum(plddt) / len(plddt), 1) if plddt else None
+
+            return {
+                "accession": accession,
+                "entry_id": m.get("entryId"),
+                "version": m.get("latestVersion"),
+                "pdb_url": m.get("pdbUrl"),
+                "cif_url": m.get("cifUrl"),
+                "pae_url": m.get("paeImageUrl"),
+                "viewer_url": f"https://alphafold.ebi.ac.uk/entry/{accession}",
+                "plddt": plddt,
+                "mean_plddt": mean_plddt,
+                "retrieved_at": _now_iso(),
+            }
+        except Exception as e:
+            print(f"AlphaFold fetch error: {e}")
+            return {}
+
+    @staticmethod
     @cached("sequence")
     def fetch_sequence(accession: str) -> Dict:
         """
@@ -419,7 +480,13 @@ class DatabaseConnector:
             # parsing.
             fields = (
                 "accession,id,protein_name,organism_name,gene_names,"
-                "cc_function,sequence,xref_pdb,xref_kegg"
+                "cc_function,sequence,xref_pdb,xref_kegg,"
+                # Feature annotations ride along on the request already being
+                # made — domains, sites and modifications cost nothing extra
+                # here and are what turn a sequence into an annotated map.
+                "ft_signal,ft_chain,ft_peptide,ft_transmem,ft_domain,ft_region,"
+                "ft_zn_fing,ft_motif,ft_act_site,ft_binding,ft_site,"
+                "ft_mod_res,ft_carbohyd,ft_disulfid"
             )
 
             entry = None
@@ -473,6 +540,39 @@ class DatabaseConnector:
 
             sequence = entry.get("sequence", {})
 
+            # Group features into the four bands the viewer draws. Grouping
+            # rather than passing 14 raw types through keeps the colour
+            # encoding to four categories, which is what the palette
+            # validates all-pairs.
+            feature_group = {
+                "Signal": "topology", "Transmembrane": "topology",
+                "Chain": "topology", "Peptide": "topology",
+                "Domain": "domain", "Region": "domain",
+                "Zinc finger": "domain", "Motif": "domain",
+                "Active site": "site", "Binding site": "site", "Site": "site",
+                "Modified residue": "modification", "Glycosylation": "modification",
+                "Disulfide bond": "modification",
+            }
+
+            features = []
+            for f in entry.get("features", []):
+                loc = f.get("location", {})
+                start = (loc.get("start") or {}).get("value")
+                end = (loc.get("end") or {}).get("value")
+                if start is None or end is None:
+                    continue
+                ftype = f.get("type", "")
+                features.append(
+                    {
+                        "type": ftype,
+                        "group": feature_group.get(ftype, "domain"),
+                        "start": start,
+                        "end": end,
+                        "description": f.get("description", ""),
+                    }
+                )
+            features.sort(key=lambda x: (x["start"], x["end"]))
+
             return {
                 "query": query,
                 "accession": accession,
@@ -505,6 +605,7 @@ class DatabaseConnector:
                     }
                     for kegg_id in kegg_ids
                 ],
+                "features": features,
                 "links": {
                     "uniprot": f"https://www.uniprot.org/uniprotkb/{accession}",
                 },

@@ -367,6 +367,21 @@ async def get_entity(query: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/alphafold/{accession}")
+def get_alphafold(accession: str):
+    """
+    AlphaFold model for an accession, fetched separately from /entity.
+
+    Kept lazy for the same reason as literature: it's another round trip, and
+    the cross-reference should render as soon as the core record is back
+    rather than waiting on a structure the reader may not scroll to.
+    """
+    model = db_connector.fetch_alphafold(accession)
+    if not model:
+        raise HTTPException(status_code=404, detail=f"No AlphaFold model for '{accession}'")
+    return model
+
+
 @app.get("/literature/{gene_symbol}")
 async def get_literature(gene_symbol: str, limit: int = 5):
     """

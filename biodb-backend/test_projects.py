@@ -368,3 +368,43 @@ def test_alignment_404s_for_missing_project(client):
         },
     )
     assert res.status_code == 404
+
+
+@pytest.mark.network
+def test_entity_returns_grouped_features(client):
+    """
+    Features ride along on the UniProt request /entity already makes, so this
+    also guards against the fields list being trimmed later: EGFR should carry
+    its signal peptide, kinase domain and active site.
+    """
+    entity = client.get("/entity/EGFR").json()
+    features = entity["features"]
+    assert len(features) > 20
+
+    groups = {f["group"] for f in features}
+    assert {"topology", "domain", "site", "modification"} <= groups
+
+    types = {f["type"] for f in features}
+    assert {"Signal", "Domain", "Active site", "Transmembrane"} <= types
+
+    for f in features:
+        assert f["start"] <= f["end"]
+        assert f["end"] <= entity["sequence"]["length"]
+
+
+@pytest.mark.network
+def test_alphafold_model_with_per_residue_confidence(client):
+    model = client.get("/alphafold/P01308").json()
+    assert model["entry_id"] == "AF-P01308-F1"
+    assert model["pdb_url"].endswith(".pdb")
+
+    # One pLDDT score per residue, on the published 0-100 scale
+    plddt = model["plddt"]
+    assert len(plddt) == 110
+    assert all(0 <= v <= 100 for v in plddt)
+    assert model["mean_plddt"] == pytest.approx(sum(plddt) / len(plddt), abs=0.1)
+
+
+@pytest.mark.network
+def test_alphafold_404s_for_unknown_accession(client):
+    assert client.get("/alphafold/NOTAREALACCESSION").status_code == 404

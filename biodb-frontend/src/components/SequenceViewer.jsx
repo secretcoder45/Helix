@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Check, Palette, X } from 'lucide-react'
 import {
   CLASS_OF,
@@ -127,6 +127,7 @@ export function SequenceViewer({
   onSelectionToTray,
   defaultMode = 'class',
   compact = false,
+  focusRegion = null,
 }) {
   const clean = useMemo(() => (sequence || '').toUpperCase().replace(/\s/g, ''), [sequence])
   const isNucleotide = useMemo(() => isNucleotideSequence(clean), [clean])
@@ -134,6 +135,22 @@ export function SequenceViewer({
   const [hover, setHover] = useState(null)
   const [selection, setSelection] = useState(null)
   const dragRef = useRef(null)
+  const scrollRef = useRef(null)
+
+  // A region chosen elsewhere (a feature on the map above) selects here and
+  // scrolls to itself — the two views are of the same protein, so a click in
+  // one should move the other rather than leaving the reader to find it.
+  useEffect(() => {
+    if (!focusRegion) return
+    const start = Math.max(0, focusRegion.start - 1)
+    const end = Math.min(clean.length - 1, focusRegion.end - 1)
+    setSelection({ start, end })
+    const row = Math.floor(start / 60)
+    scrollRef.current?.querySelector(`[data-row="${row}"]`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  }, [focusRegion, clean.length])
   const [copied, setCopied] = useState(false)
 
   // Event delegation rather than per-residue handlers: a 1800-residue protein
@@ -245,6 +262,7 @@ export function SequenceViewer({
           count to a residue by eye instead of hovering. Reflowing to container
           width (the obvious approach) destroys that alignment. */}
       <div
+        ref={scrollRef}
         onMouseMove={onMove}
         onMouseDown={onDown}
         onMouseUp={endDrag}
@@ -258,7 +276,7 @@ export function SequenceViewer({
       >
         <div className="w-max">
           {rows.map((row) => (
-            <div key={row.start} className="flex items-center gap-3">
+            <div key={row.start} data-row={row.start / 60} className="flex items-center gap-3">
               <span className="tnum w-10 shrink-0 select-none text-right text-[10px] text-ink-3">
                 {row.start + 1}
               </span>

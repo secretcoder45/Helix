@@ -192,6 +192,19 @@ export function useRestriction() {
   })
 }
 
+export function useAlphafold(accession) {
+  return useQuery({
+    queryKey: ['alphafold', accession],
+    queryFn: async () => {
+      const { data } = await client.get(`/alphafold/${encodeURIComponent(accession)}`)
+      return data
+    },
+    enabled: Boolean(accession),
+    retry: false,
+    staleTime: 30 * 60_000,
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

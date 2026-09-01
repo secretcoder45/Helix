@@ -13,12 +13,16 @@ import {
   Loader2,
   Link2,
   BookOpen,
+  Layers,
+  Sparkles,
 } from 'lucide-react'
-import { useEntity, useLiterature } from '../lib/api'
+import { useEntity, useLiterature, useAlphafold } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
 import { AddToTrayButton } from '../components/SequenceTrayUI'
 import { SequenceViewer } from '../components/SequenceViewer'
+import { FeatureTrack } from '../components/FeatureTrack'
+import { LineChart } from '../components/charts'
 import { useSequenceTray } from '../context/SequenceTray'
 import {
   Card,
@@ -60,6 +64,7 @@ function Stat({ label, value, mono }) {
 function SequenceCard({ entity }) {
   const [copied, copy] = useCopy()
   const { add } = useSequenceTray()
+  const [focusRegion, setFocusRegion] = useState(null)
   const seq = entity.sequence
   if (!seq?.value) return null
 
@@ -100,12 +105,25 @@ function SequenceCard({ entity }) {
         <Stat label="Mass" value={`${(seq.molecular_weight / 1000).toFixed(1)} kDa`} mono />
         <Stat label="Accession" value={entity.accession} mono />
       </div>
+      {entity.features?.length > 0 && (
+        <div className="border-b border-line px-4 py-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+            Annotated features · {entity.features.length}
+          </p>
+          <FeatureTrack
+            features={entity.features}
+            length={seq.length}
+            onSelectRegion={(f) => setFocusRegion({ start: f.start, end: f.end, k: Date.now() })}
+          />
+        </div>
+      )}
       <div className="p-4">
         <SequenceViewer
           sequence={seq.value}
           label={entity.name}
           accession={entity.accession}
           onSelectionToTray={add}
+          focusRegion={focusRegion}
         />
       </div>
     </Card>
@@ -149,6 +167,76 @@ function LiteratureCard({ geneSymbol }) {
           ))}
         </ul>
       )}
+    </Card>
+  )
+}
+
+function AlphafoldCard({ accession, hasExperimental }) {
+  const { data: model, isLoading, isError } = useAlphafold(accession)
+
+  if (isLoading)
+    return (
+      <Card>
+        <CardHeader title="Predicted structure" icon={Sparkles} />
+        <div className="p-4">
+          <Skeleton className="h-48 rounded-lg" />
+        </div>
+      </Card>
+    )
+  if (isError || !model) return null
+
+  return (
+    <Card>
+      <CardHeader
+        title="Predicted structure"
+        icon={Sparkles}
+        subtitle={`AlphaFold ${model.entry_id} · v${model.version}`}
+        action={
+          <a
+            href={model.viewer_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] text-ink-2 transition-colors hover:border-accent hover:text-accent"
+          >
+            AlphaFold DB <ExternalLink size={10} />
+          </a>
+        }
+      />
+      <div className="p-4">
+        {model.plddt?.length > 0 && (
+          <>
+            <div className="mb-2 flex items-baseline justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                Per-residue confidence (pLDDT)
+              </span>
+              <span className="tnum text-[11px] text-ink-2">mean {model.mean_plddt}</span>
+            </div>
+            <LineChart
+              data={model.plddt.map((y, i) => ({ x: i + 1, y }))}
+              height={150}
+              yMin={0}
+              yMax={100}
+              fillArea
+              color="var(--res-hydrophobic)"
+              xLabel="residue position"
+              yLabel="pLDDT"
+              formatX={(v) => Math.round(v)}
+              formatY={(v) => Math.round(v)}
+            />
+            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-3">
+              Above 90 is very high confidence, 70–90 confident, 50–70 low, below 50 very low.
+              Low-scoring stretches are frequently genuinely disordered rather than badly
+              predicted, so this reads as much as a structural claim as a quality score.
+            </p>
+          </>
+        )}
+        <p className="mt-3 border-t border-line pt-3 text-[11px] leading-relaxed text-ink-3">
+          {hasExperimental
+            ? 'A computational model — useful for regions the experimental structures do not cover.'
+            : 'No experimental structure exists for this protein, so this prediction is the only structural view available.'}{' '}
+          Open it in AlphaFold DB above for the interactive 3D view.
+        </p>
+      </div>
     </Card>
   )
 }
@@ -372,6 +460,11 @@ export function EntityPage() {
                       </ul>
                     </Card>
                   )}
+
+                  <AlphafoldCard
+                    accession={entity.accession}
+                    hasExperimental={entity.structures?.length > 0}
+                  />
 
                   {entity.pathways?.length > 0 && (
                     <Card>
