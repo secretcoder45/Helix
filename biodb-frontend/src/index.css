@@ -233,6 +233,69 @@ body {
   border-radius: 4px;
 }
 
+/* ---------------------------------------------------------------------------
+   Landing page motion
+
+   Keyframes define only the starting state (`from`), so the element's own
+   styles are the end state. With reduced motion the animation is removed and
+   everything simply renders finished — nothing is left invisible.
+--------------------------------------------------------------------------- */
+
+@keyframes land-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes fig-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes fig-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes fig-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.land-rise {
+  animation: land-rise 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.fig-res {
+  animation: fig-rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-box: fill-box;
+  cursor: default;
+}
+
+.fig-bond {
+  stroke-dasharray: 1;
+  animation: fig-draw 900ms cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+
+.fig-fade {
+  animation: fig-fade 500ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .land-rise,
+  .fig-res,
+  .fig-bond,
+  .fig-fade {
+    animation: none;
+  }
+}
+
 kbd {
   font-family: var(--font-sans);
   font-size: 10px;

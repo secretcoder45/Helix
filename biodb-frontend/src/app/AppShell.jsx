@@ -102,7 +102,7 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
 
         <nav className="flex-1 overflow-y-auto px-2.5 py-3">
           <div className="space-y-0.5">
-            <NavItem to="/" end icon={Link2} label="Cross-reference" collapsed={collapsed} />
+            <NavItem to="/lookup" icon={Link2} label="Cross-reference" collapsed={collapsed} />
             <NavItem to="/batch" icon={Rows3} label="Batch lookup" collapsed={collapsed} />
             <NavItem to="/blast" icon={Dna} label="BLAST" collapsed={collapsed} />
             <NavItem to="/align" icon={GitCompareArrows} label="Alignment" collapsed={collapsed} />

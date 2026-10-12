@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+import { API_URL } from './config'
+
+export { API_URL }
 
 const client = axios.create({ baseURL: API_URL })
 

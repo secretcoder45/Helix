@@ -41,7 +41,7 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
   }
 
   const NAV = [
-    { to: '/', icon: Link2, label: 'Cross-reference' },
+    { to: '/lookup', icon: Link2, label: 'Cross-reference' },
     { to: '/batch', icon: Rows3, label: 'Batch lookup' },
     { to: '/blast', icon: Dna, label: 'BLAST search' },
     { to: '/align', icon: GitCompareArrows, label: 'Pairwise alignment' },
@@ -101,7 +101,7 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
                   >
                     <Command.Item
                       value={`entity-${entity.accession}`}
-                      onSelect={() => go(`/?q=${encodeURIComponent(debounced)}`)}
+                      onSelect={() => go(`/lookup?q=${encodeURIComponent(debounced)}`)}
                       className="flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2.5 data-[selected=true]:bg-accent-soft"
                     >
                       <div className="min-w-0 flex-1">

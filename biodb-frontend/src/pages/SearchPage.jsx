@@ -53,7 +53,7 @@ export function SearchPage({ databases }) {
   }, [debounced, database])
 
   if (!databases[database]) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/lookup" replace />
   }
 
   const db = databases[database]
