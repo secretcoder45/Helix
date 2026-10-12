@@ -6,10 +6,31 @@ from datetime import datetime, timezone
 from typing import List, Dict
 
 from cache import cached
+import provenance as prov
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _uniprot_provenance(entry: Dict, release: Dict, retrieved_at: str) -> Dict:
+    """Provenance for one UniProtKB entry: release, entry/sequence version, CRC64."""
+    audit = entry.get("entryAudit") or {}
+    sequence = entry.get("sequence") or {}
+    # Prefer UniProt's own checksum; compute the identical CRC64 if absent.
+    checksum = (
+        f"CRC64:{sequence['crc64']}" if sequence.get("crc64")
+        else prov.sequence_checksum(sequence.get("value", ""))
+    )
+    return prov.record(
+        "UniProtKB",
+        record_id=entry.get("primaryAccession"),
+        record_version=audit.get("entryVersion"),
+        sequence_version=audit.get("sequenceVersion"),
+        checksum=checksum,
+        retrieved_at=retrieved_at,
+        **release,
+    )
 
 
 class _RateLimiter:
@@ -52,6 +73,43 @@ class DatabaseConnector:
         "pdb": "https://data.rcsb.org/rest/v1/core/structure",
         "kegg": "https://rest.kegg.jp",
     }
+
+    @staticmethod
+    @cached("release")
+    def source_release(database: str) -> Dict:
+        """
+        The current release (or nearest equivalent) of a source database.
+
+        Used for records whose own response doesn't say which release it came
+        from. UniProt does say, in a response header, so its records take the
+        release from the exact response that produced them and only fall back
+        to this. Cached like everything else here, which is ample: the
+        fastest-moving of these sources changes daily, UniProt every ~8 weeks.
+        """
+        name = prov.canonical(database)
+        try:
+            if name == "UniProtKB":
+                r = requests.get(
+                    DatabaseConnector.BASE_URLS["uniprot"],
+                    params={"query": "accession:P38398", "fields": "accession", "size": 1, "format": "json"},
+                    timeout=8,
+                )
+                return prov.uniprot_release(r.headers) if r.status_code == 200 else {}
+            if name in ("NCBI Gene", "PubMed"):
+                params = {"db": "gene" if name == "NCBI Gene" else "pubmed", "retmode": "json"}
+                if os.getenv("NCBI_API_KEY"):
+                    params["api_key"] = os.getenv("NCBI_API_KEY")
+                _NCBI_LIMITER.acquire()
+                r = requests.get(f"{DatabaseConnector.BASE_URLS['ncbi']}/einfo.fcgi", params=params, timeout=8)
+                return prov.ncbi_release(r.json()) if r.status_code == 200 else {}
+            if name == "KEGG":
+                r = requests.get(f"{DatabaseConnector.BASE_URLS['kegg']}/info/pathway", timeout=8)
+                return prov.kegg_release(r.text) if r.status_code == 200 else {}
+        except Exception as e:
+            print(f"Release lookup error ({name}): {e}")
+        # RCSB PDB updates weekly with no release identifier in its APIs;
+        # the retrieval date is the honest record there.
+        return {}
 
     @staticmethod
     @cached("ncbi_gene")
@@ -98,6 +156,8 @@ class DatabaseConnector:
                 return []
 
             summary_data = summary_response.json()
+            release = DatabaseConnector.source_release("NCBI Gene")
+            now = _now_iso()
             results = []
             for gene_id in gene_ids:
                 gene_info = summary_data.get("result", {}).get(gene_id, {})
@@ -110,7 +170,10 @@ class DatabaseConnector:
                         "description": gene_info.get("description", "Gene"),
                         "type": gene_info.get("type", "protein-coding"),
                         "link": f"https://www.ncbi.nlm.nih.gov/gene/{gene_id}",
-                        "retrieved_at": _now_iso(),
+                        "retrieved_at": now,
+                        "provenance": prov.record(
+                            "NCBI Gene", record_id=gene_id, retrieved_at=now, **release
+                        ),
                     }
                 )
 
@@ -137,6 +200,8 @@ class DatabaseConnector:
                 return []
 
             data = response.json()
+            release = prov.uniprot_release(response.headers)
+            now = _now_iso()
             results = []
 
             for entry in data.get("results", [])[:5]:
@@ -153,7 +218,8 @@ class DatabaseConnector:
                             "scientificName", "Unknown"
                         ),
                         "link": f"https://www.uniprot.org/uniprotkb/{accession}",
-                        "retrieved_at": _now_iso(),
+                        "retrieved_at": now,
+                        "provenance": _uniprot_provenance(entry, release, now),
                     }
                 )
 
@@ -188,6 +254,7 @@ class DatabaseConnector:
                 return []
 
             data = response.json()
+            now = _now_iso()
             results = []
 
             for result in data.get("result_set", [])[:5]:
@@ -198,7 +265,10 @@ class DatabaseConnector:
                         "name": f"PDB {identifier}",
                         "description": protein_name,
                         "link": f"https://www.rcsb.org/structure/{identifier}",
-                        "retrieved_at": _now_iso(),
+                        "retrieved_at": now,
+                        "provenance": prov.record(
+                            "RCSB PDB", record_id=identifier, retrieved_at=now
+                        ),
                     }
                 )
 
@@ -219,6 +289,8 @@ class DatabaseConnector:
             if response.status_code != 200 or not response.text.strip():
                 return []
 
+            release = DatabaseConnector.source_release("KEGG")
+            now = _now_iso()
             results = []
             for line in response.text.strip().split("\n")[:5]:
                 parts = line.split("\t")
@@ -231,7 +303,10 @@ class DatabaseConnector:
                             "name": name,
                             "description": "KEGG Pathway",
                             "link": f"https://www.kegg.jp/pathway/{pathway_id.split(':')[-1]}",
-                            "retrieved_at": _now_iso(),
+                            "retrieved_at": now,
+                            "provenance": prov.record(
+                                "KEGG", record_id=pathway_id, retrieved_at=now, **release
+                            ),
                         }
                     )
             return results
@@ -283,6 +358,8 @@ class DatabaseConnector:
                 return []
 
             result = summary_response.json().get("result", {})
+            release = DatabaseConnector.source_release("PubMed")
+            now = _now_iso()
             papers = []
             for pmid in result.get("uids", []):
                 article = result.get(pmid, {})
@@ -308,7 +385,10 @@ class DatabaseConnector:
                         "year": (article.get("pubdate") or "")[:4],
                         "doi": doi,
                         "link": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
-                        "retrieved_at": _now_iso(),
+                        "retrieved_at": now,
+                        "provenance": prov.record(
+                            "PubMed", record_id=pmid, retrieved_at=now, **release
+                        ),
                     }
                 )
 
@@ -412,6 +492,7 @@ class DatabaseConnector:
                 plddt = []
 
             mean_plddt = round(sum(plddt) / len(plddt), 1) if plddt else None
+            now = _now_iso()
 
             return {
                 "accession": accession,
@@ -423,7 +504,16 @@ class DatabaseConnector:
                 "viewer_url": f"https://alphafold.ebi.ac.uk/entry/{accession}",
                 "plddt": plddt,
                 "mean_plddt": mean_plddt,
-                "retrieved_at": _now_iso(),
+                "retrieved_at": now,
+                # The model version is AlphaFold DB's unit of change: a v4
+                # and a v6 model of the same protein are different predictions.
+                "provenance": prov.record(
+                    "AlphaFold DB",
+                    record_id=m.get("entryId"),
+                    record_version=m.get("latestVersion"),
+                    release_date=(m.get("modelCreatedDate") or "")[:10] or None,
+                    retrieved_at=now,
+                ),
             }
         except Exception as e:
             print(f"AlphaFold fetch error: {e}")
@@ -443,7 +533,9 @@ class DatabaseConnector:
         try:
             response = requests.get(
                 f"https://rest.uniprot.org/uniprotkb/{accession}.json",
-                params={"fields": "accession,id,protein_name,organism_name,sequence"},
+                params={
+                    "fields": "accession,id,protein_name,organism_name,sequence,version,sequence_version"
+                },
                 timeout=10,
             )
             # UniProt answers 400 (not 404) for an accession that doesn't
@@ -456,6 +548,7 @@ class DatabaseConnector:
             sequence = entry.get("sequence", {})
             if not sequence.get("value"):
                 return {}
+            now = _now_iso()
 
             return {
                 "accession": entry.get("primaryAccession", accession),
@@ -467,7 +560,10 @@ class DatabaseConnector:
                 "organism": entry.get("organism", {}).get("scientificName", ""),
                 "sequence": sequence.get("value", ""),
                 "length": sequence.get("length"),
-                "retrieved_at": _now_iso(),
+                "retrieved_at": now,
+                "provenance": _uniprot_provenance(
+                    entry, prov.uniprot_release(response.headers), now
+                ),
             }
         except Exception as e:
             print(f"Sequence fetch error: {e}")
@@ -536,10 +632,13 @@ class DatabaseConnector:
                 # here and are what turn a sequence into an annotated map.
                 "ft_signal,ft_chain,ft_peptide,ft_transmem,ft_domain,ft_region,"
                 "ft_zn_fing,ft_motif,ft_act_site,ft_binding,ft_site,"
-                "ft_mod_res,ft_carbohyd,ft_disulfid"
+                "ft_mod_res,ft_carbohyd,ft_disulfid,"
+                # Entry and sequence versions: what makes the record citable.
+                "version,sequence_version"
             )
 
             entry = None
+            release = {}
             for term in attempts:
                 response = requests.get(
                     url,
@@ -558,6 +657,8 @@ class DatabaseConnector:
                 results = response.json().get("results", [])
                 if results:
                     entry = max(results, key=score)
+                    # The release that produced THIS entry, from this response.
+                    release = prov.uniprot_release(response.headers)
                     break
 
             if not entry:
@@ -622,6 +723,7 @@ class DatabaseConnector:
                     }
                 )
             features.sort(key=lambda x: (x["start"], x["end"]))
+            now = _now_iso()
 
             return {
                 "query": query,
@@ -659,7 +761,8 @@ class DatabaseConnector:
                 "links": {
                     "uniprot": f"https://www.uniprot.org/uniprotkb/{accession}",
                 },
-                "retrieved_at": _now_iso(),
+                "retrieved_at": now,
+                "provenance": _uniprot_provenance(entry, release, now),
             }
 
         except Exception as e:

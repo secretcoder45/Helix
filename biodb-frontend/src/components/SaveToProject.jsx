@@ -23,6 +23,9 @@ export function SaveToProject({ result, size = 'md' }) {
     description: result.description || '',
     link: result.link || '',
     retrieved_at: result.retrieved_at || null,
+    // Captured by the backend when the record was fetched; sent back so the
+    // saved row records that retrieval, not the moment of saving.
+    provenance: result.provenance || null,
   }
 
   const save = async (projectId, projectName) => {

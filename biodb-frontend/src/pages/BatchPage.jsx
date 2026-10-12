@@ -212,6 +212,7 @@ export function BatchPage() {
       description: r.protein_name || '',
       link: r.link || '',
       retrieved_at: r.retrieved_at || null,
+      provenance: r.provenance || null,
     }))
 
   return (

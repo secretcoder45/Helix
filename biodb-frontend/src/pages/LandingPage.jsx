@@ -725,17 +725,15 @@ function Checked() {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-5 py-4">
           <p className="m-0 text-[13.5px] text-ink-2">
-            <span className="tnum font-semibold text-ink">152</span> automated tests, including
-            checks against live UniProt, NCBI and KEGG responses.
+            <span className="tnum font-semibold text-ink">176</span> automated tests: the offline
+            suite on every push, live checks against UniProt, NCBI and KEGG every week.
           </p>
-          <a
-            href={`${GITHUB}/tree/main/biodb-backend`}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            to="/validation"
             className="inline-flex items-center gap-1 text-[13px] font-medium text-accent hover:text-accent-hover"
           >
-            Read the tests <ArrowUpRight size={13} aria-hidden="true" />
-          </a>
+            Every check, and the tests behind it <ArrowRight size={13} aria-hidden="true" />
+          </Link>
         </div>
       </Container>
     </section>

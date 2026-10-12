@@ -36,9 +36,24 @@ def get_db():
         db.close()
 
 
-def init_db():
-    # MVP: create tables directly from models. Once the schema stabilizes,
-    # switch to Alembic migrations instead of editing tables in place.
+def init_db(bind=None):
+    """
+    Bring the schema up to date by applying migrations (see migrations/).
+
+    Replaces Base.metadata.create_all, which creates missing tables but never
+    alters existing ones — so a new column would appear in fresh databases
+    and silently never in production. Runs on every startup; already-applied
+    migrations are skipped, so this is cheap when there is nothing to do.
+    """
+    from alembic import command
+    from alembic.config import Config
+
     import models  # noqa: F401 (ensures models are registered on Base)
 
-    Base.metadata.create_all(bind=engine)
+    here = os.path.dirname(os.path.abspath(__file__))
+    cfg = Config(os.path.join(here, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(here, "migrations"))
+
+    with (bind or engine).begin() as connection:
+        cfg.attributes["connection"] = connection
+        command.upgrade(cfg, "head")

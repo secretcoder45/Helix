@@ -13,6 +13,7 @@ import {
   Microscope,
   Sparkles,
   FolderOpen,
+  BadgeCheck,
   Search,
   Moon,
   Sun,
@@ -115,6 +116,7 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             <NavItem to="/phylo" icon={GitBranch} label="Phylogeny" collapsed={collapsed} />
             <NavItem to="/chat" icon={Sparkles} label="Assistant" collapsed={collapsed} />
             <NavItem to="/projects" icon={FolderOpen} label="Projects" collapsed={collapsed} />
+            <NavItem to="/validation" icon={BadgeCheck} label="Validation" collapsed={collapsed} />
           </div>
 
           <SectionLabel collapsed={collapsed}>Databases</SectionLabel>

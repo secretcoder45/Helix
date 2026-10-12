@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ExternalLink, X, Copy, Check, Boxes } from 'lucide-react'
 import { SaveToProject } from './SaveToProject'
 import { SourceBadge } from './ui'
+import { ProvenanceLine } from './Provenance'
 
 function CopyValue({ value }) {
   const [copied, setCopied] = useState(false)
@@ -108,9 +109,14 @@ export function DetailPanel({ result, open, onOpenChange }) {
                         <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">
                           Provenance
                         </dt>
-                        <dd className="mt-1 text-[12px] text-ink-3">
-                          Retrieved {new Date(result.retrieved_at).toLocaleString()} from{' '}
-                          {result.database}
+                        <dd className="mt-1 space-y-0.5 text-[12px] text-ink-3">
+                          <p>
+                            Retrieved {new Date(result.retrieved_at).toLocaleString()} from{' '}
+                            {result.database}
+                          </p>
+                          <p className="text-[11px]">
+                            <ProvenanceLine provenance={result.provenance} />
+                          </p>
                         </dd>
                       </div>
                     )}

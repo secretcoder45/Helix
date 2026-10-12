@@ -7,8 +7,8 @@ import {
   ExternalLink,
   ChevronRight,
   Download,
-  FileText,
   Braces,
+  BookOpenText,
   Table,
   GitCompareArrows,
 } from 'lucide-react'
@@ -20,7 +20,9 @@ import {
   useRemoveItem,
   useRemoveAlignment,
 } from '../lib/api'
-import { exportCsv, exportCitations, exportJson } from '../lib/export'
+import { exportCsv, exportJson } from '../lib/export'
+import { MethodsDialog } from '../components/MethodsDialog'
+import { ProvenanceLine } from '../components/Provenance'
 import {
   Button,
   Card,
@@ -38,11 +40,6 @@ function ExportMenu({ projectName, items }) {
 
   const actions = [
     { label: 'CSV for spreadsheets', icon: Table, run: () => exportCsv(projectName, items) },
-    {
-      label: 'Citations for methods',
-      icon: FileText,
-      run: () => exportCitations(projectName, items),
-    },
     { label: 'JSON', icon: Braces, run: () => exportJson(projectName, items) },
   ]
 
@@ -108,6 +105,8 @@ function AlignmentRows({ projectId, alignments }) {
               {a.params?.matrix && (
                 <p className="mt-0.5 font-mono text-[10px] text-ink-3">
                   {a.params.matrix}, gap {a.params.gap_open}/{a.params.gap_extend}
+                  {a.provenance?.helix?.version &&
+                    ` · Helix ${a.provenance.helix.version}${a.provenance.helix.commit ? ` (${a.provenance.helix.commit})` : ''}`}
                 </p>
               )}
             </div>
@@ -127,6 +126,7 @@ function AlignmentRows({ projectId, alignments }) {
 function ProjectItems({ projectId }) {
   const { data: project, isLoading } = useProject(projectId)
   const removeItem = useRemoveItem()
+  const [methodsOpen, setMethodsOpen] = useState(false)
 
   if (isLoading)
     return (
@@ -144,8 +144,16 @@ function ProjectItems({ projectId }) {
           {project.items.length} {project.items.length === 1 ? 'record' : 'records'}
           {project.alignments?.length ? ` · ${project.alignments.length} alignments` : ''}
         </span>
-        <ExportMenu projectName={project.name} items={project.items} />
+        <div className="flex items-center gap-2">
+          {(project.items.length > 0 || project.alignments?.length > 0) && (
+            <Button size="sm" variant="primary" onClick={() => setMethodsOpen(true)}>
+              <BookOpenText size={12} /> Methods & references
+            </Button>
+          )}
+          <ExportMenu projectName={project.name} items={project.items} />
+        </div>
       </div>
+      <MethodsDialog project={project} open={methodsOpen} onOpenChange={setMethodsOpen} />
 
       {project.items.length === 0 && !project.alignments?.length ? (
         <p className="px-4 py-6 text-center text-[12px] text-ink-3">
@@ -173,6 +181,11 @@ function ProjectItems({ projectId }) {
                   {item.retrieved_at &&
                     ` · retrieved ${new Date(item.retrieved_at).toLocaleDateString()}`}
                 </p>
+                {item.provenance && (
+                  <p className="mt-0.5 text-[10.5px] text-ink-3">
+                    <ProvenanceLine provenance={{ ...item.provenance, helix: null }} />
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                 {item.link && (
@@ -222,7 +235,7 @@ export function ProjectsPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Projects"
-        description="Saved records keep their source and retrieval date, so a collection can be exported straight into a methods section."
+        description="Saved records keep the database release, entry version and checksum they came from, so a project can be written straight into a methods section."
         actions={
           <form onSubmit={create} className="flex items-center gap-2">
             <Input

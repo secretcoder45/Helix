@@ -37,6 +37,7 @@ const PrimerPage = page(() => import('../pages/PrimerPage'), 'PrimerPage')
 const ChatPage = page(() => import('../pages/ChatPage'), 'ChatPage')
 const ProjectsPage = page(() => import('../pages/ProjectsPage'), 'ProjectsPage')
 const SearchPage = page(() => import('../pages/SearchPage'), 'SearchPage')
+const ValidationPage = page(() => import('../pages/ValidationPage'), 'ValidationPage')
 
 // Created at module scope so it survives re-renders; it lives here rather
 // than in main.jsx so the landing page doesn't ship react-query.
@@ -166,6 +167,7 @@ function WorkspaceInner() {
             <Route path="primers" element={<PrimerPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="projects" element={<ProjectsPage />} />
+            <Route path="validation" element={<ValidationPage />} />
             <Route path="db/:database" element={<SearchPage databases={databases} />} />
             <Route path="*" element={<Navigate to="/lookup" replace />} />
           </Routes>

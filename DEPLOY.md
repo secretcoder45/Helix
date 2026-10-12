@@ -88,13 +88,20 @@ Against the live site, not localhost — expect the first request to be slow
 | `PORT` | Render | auto | Injected; the app binds to it |
 | `VITE_API_URL` | Vercel | yes | Baked in at build time, so changing it needs a rebuild |
 
+## Database migrations
+
+The schema is managed by Alembic (`biodb-backend/migrations/`). The app runs
+`alembic upgrade head` itself on startup, so a deploy that includes a new
+migration applies it with no manual step; already-applied migrations are
+skipped. To change the schema: edit `models.py`, then from `biodb-backend/`
+run `alembic revision --autogenerate -m "what changed"`, read the generated
+file, and commit it. `test_migrations_produce_exactly_the_schema_the_models_describe`
+fails if a model change is committed without its migration.
+
 ## Known gaps
 
 - **Cold starts.** Free Render sleeps after 15 min idle. Upgrading to a paid
   instance ($7/mo) removes this if the app gets real users.
-- **Schema changes.** Tables are created with `create_all()`, which adds new
-  tables but never alters existing ones. The first schema change against a
-  database with real data in it will need Alembic.
 - **Cache is per-process.** The in-memory TTL cache is not shared, so scaling
   past one instance means each replica keeps its own. Swap it for Redis at
   that point — `cache.py`'s decorator is the only call site.

@@ -27,6 +27,9 @@ import primer_service
 from cache import cache_stats
 import db as db_module
 import models
+import methods_service
+import provenance as prov
+from version import HELIX_VERSION, helix_build, library_versions
 
 # Stripped from natural-language chat questions before hitting database search
 # APIs, which expect keyword-like queries (e.g. "insulin"), not full sentences
@@ -56,7 +59,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Unified Bioinformatics Database", lifespan=lifespan)
+app = FastAPI(title="Helix API", version=HELIX_VERSION, lifespan=lifespan)
 
 # Enable CORS for frontend
 # Origins come from the environment so the deployed frontend isn't blocked.
@@ -120,6 +123,9 @@ class SavedItemCreate(BaseModel):
     link: str = ""
     retrieved_at: Optional[str] = None
     notes: str = ""
+    # Captured when the record was retrieved (see provenance.py) and passed
+    # back on save, so it describes the retrieval rather than the save.
+    provenance: Optional[Dict] = None
 
 
 class BulkSavedItemsCreate(BaseModel):
@@ -205,12 +211,31 @@ class SavedAlignmentCreate(BaseModel):
     length: int = 0
     params: Dict = {}
     notes: str = ""
+    provenance: Optional[Dict] = None
 
 
 # ---- Routes ----
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "version": HELIX_VERSION}
+
+
+@app.get("/provenance")
+def current_provenance():
+    """
+    The build answering this request and the current release of each source.
+
+    What a reader needs to judge whether a result produced now would match one
+    produced earlier: same Helix commit, same Biopython, same source releases.
+    """
+    return {
+        "helix": helix_build(),
+        "libraries": library_versions(),
+        "sources": {
+            name: db_connector.source_release(name)
+            for name in ("UniProtKB", "NCBI Gene", "PubMed", "KEGG")
+        },
+    }
 
 
 @app.get("/cache/stats")
@@ -265,6 +290,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "description": r["description"],
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
+                "provenance": r.get("provenance"),
             }
             for r in db_connector.search_uniprot_protein(query)
         ]
@@ -276,6 +302,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "description": r["description"],
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
+                "provenance": r.get("provenance"),
             }
             for r in db_connector.search_pdb_protein(query)
         )
@@ -289,6 +316,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "description": r["description"],
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
+                "provenance": r.get("provenance"),
             }
             for r in db_connector.search_ncbi_gene(query)
         ]
@@ -302,6 +330,7 @@ def _run_search(database: str, query: str) -> List[Dict]:
                 "description": r["description"],
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
+                "provenance": r.get("provenance"),
             }
             for r in db_connector.search_kegg_pathway(query)
         ]
@@ -374,6 +403,7 @@ async def get_entity(query: str):
                 "database": "NCBI Gene",
                 "description": g["description"],
                 "link": g["link"],
+                "provenance": g.get("provenance"),
             }
             for g in gene_hits[:3]
         ]
@@ -479,6 +509,7 @@ def _batch_row(query: str, include_gene: bool) -> Dict:
         "function": entity.get("function", ""),
         "link": entity.get("links", {}).get("uniprot"),
         "retrieved_at": entity.get("retrieved_at"),
+        "provenance": entity.get("provenance"),
     }
 
     # Off by default: NCBI is the rate-limited source, so enriching a 200-row
@@ -570,6 +601,7 @@ def align_needleman_wunsch(payload: AlignRequest):
     except alignment_service.AlignmentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    result["provenance"] = prov.computation()
     return result
 
 
@@ -593,6 +625,7 @@ def align_smith_waterman(payload: AlignRequest):
     except alignment_service.AlignmentError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    result["provenance"] = prov.computation()
     return result
 
 
@@ -786,6 +819,20 @@ async def get_project(project_id: str, session: Session = Depends(db_module.get_
     return _serialize_project(project, include_items=True)
 
 
+@app.get("/projects/{project_id}/methods")
+async def project_methods(project_id: str, session: Session = Depends(db_module.get_db)):
+    """
+    A methods section for a project: prose, references, and a records table.
+
+    Built only from what the project's provenance recorded — see
+    methods_service.py for the rules it holds to.
+    """
+    project = session.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return methods_service.build(_serialize_project(project, include_items=True))
+
+
 @app.delete("/projects/{project_id}")
 async def delete_project(project_id: str, session: Session = Depends(db_module.get_db)):
     project = session.query(models.Project).filter(models.Project.id == project_id).first()
@@ -810,6 +857,14 @@ def _parse_retrieved_at(value: Optional[str]):
 
 def _build_saved_item(project_id: str, payload: SavedItemCreate) -> models.SavedItem:
     retrieved_at = _parse_retrieved_at(payload.retrieved_at)
+    # Prefer provenance captured at retrieval. Without it (an older client),
+    # record what is known now and say so: captured "save", no release.
+    provenance = prov.accept(payload.provenance) or prov.record(
+        payload.database,
+        record_id=payload.external_id,
+        retrieved_at=payload.retrieved_at,
+        captured="save",
+    )
     return models.SavedItem(
         project_id=project_id,
         external_id=payload.external_id,
@@ -818,6 +873,7 @@ def _build_saved_item(project_id: str, payload: SavedItemCreate) -> models.Saved
         description=payload.description,
         link=payload.link,
         notes=payload.notes,
+        provenance=prov.dumps(provenance),
         **({"retrieved_at": retrieved_at} if retrieved_at else {}),
     )
 
@@ -905,6 +961,9 @@ async def add_alignment(
         length=payload.length,
         params=json.dumps(payload.params),
         notes=payload.notes,
+        provenance=prov.dumps(
+            prov.accept(payload.provenance) or {**prov.computation(), "captured": "save"}
+        ),
     )
     session.add(alignment)
     session.commit()
@@ -953,6 +1012,13 @@ def _serialize_alignment(a: models.SavedAlignment) -> dict:
         "params": params,
         "notes": a.notes,
         "created_at": a.created_at.isoformat() if a.created_at else None,
+        "provenance": prov.loads(a.provenance),
+        # Derived, not stored: always consistent with the sequences above,
+        # and comparable against UniProt's own CRC64 for the same entry.
+        "checksums": {
+            "seq1": prov.sequence_checksum(a.seq1),
+            "seq2": prov.sequence_checksum(a.seq2),
+        },
     }
 
 
@@ -967,6 +1033,7 @@ def _serialize_item(item: models.SavedItem) -> dict:
         "notes": item.notes,
         "retrieved_at": item.retrieved_at.isoformat() if item.retrieved_at else None,
         "saved_at": item.saved_at.isoformat() if item.saved_at else None,
+        "provenance": prov.loads(item.provenance),
     }
 
 

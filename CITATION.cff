@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: >-
+  If you use Helix in published work, please cite it as below, and cite the
+  source databases and methods your results depend on. Each project's
+  Methods export in Helix lists exactly which ones those are.
+title: "Helix: a unified bioinformatics workspace"
+type: software
+version: 0.1.0
+date-released: "2026-10-12"
+authors:
+  - name: secretcoder45
+repository-code: "https://github.com/secretcoder45/Helix"
+url: "https://get-helix.vercel.app"
+abstract: >-
+  Helix resolves a gene or protein across UniProtKB, NCBI Gene, RCSB PDB,
+  KEGG and AlphaFold DB in one lookup, and provides pairwise alignment
+  (Needleman–Wunsch, Smith–Waterman), phylogeny, protein and DNA analysis,
+  restriction mapping and primer design. Saved results record the source
+  database release, entry version and sequence checksum they came from.
+keywords:
+  - bioinformatics
+  - sequence alignment
+  - UniProt
+  - reproducibility

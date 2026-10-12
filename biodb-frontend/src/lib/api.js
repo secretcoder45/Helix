@@ -225,6 +225,35 @@ export function usePrimers() {
   })
 }
 
+// ---- Provenance & methods ----
+
+/** The running build and current source releases — changes rarely. */
+export function useServerProvenance() {
+  return useQuery({
+    queryKey: ['provenance'],
+    queryFn: async () => {
+      const { data } = await client.get('/provenance')
+      return data
+    },
+    staleTime: 10 * 60_000,
+    retry: 1,
+  })
+}
+
+/** Methods text, references and records table for a project. Always fresh: it
+ * describes the project's current contents. */
+export function useMethods(projectId, enabled = true) {
+  return useQuery({
+    queryKey: ['methods', projectId],
+    queryFn: async () => {
+      const { data } = await client.get(`/projects/${projectId}/methods`)
+      return data
+    },
+    enabled: Boolean(projectId) && enabled,
+    staleTime: 0,
+  })
+}
+
 // ---- Projects ----
 
 export function useProjects() {

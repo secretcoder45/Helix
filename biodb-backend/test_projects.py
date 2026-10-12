@@ -9,7 +9,9 @@ import main
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    from version import HELIX_VERSION
+
+    assert client.get("/health").json() == {"status": "ok", "version": HELIX_VERSION}
 
 
 def test_project_lifecycle(client):

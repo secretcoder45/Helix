@@ -52,6 +52,11 @@ class SavedItem(Base):
     retrieved_at = Column(DateTime(timezone=True), default=_now)
     saved_at = Column(DateTime(timezone=True), default=_now)
 
+    # JSON: source release, entry/sequence version, checksum and Helix build
+    # (see provenance.py). Nullable — rows saved before it existed have none,
+    # and are reported as such rather than back-filled with a guess.
+    provenance = Column(Text, nullable=True)
+
     project = relationship("Project", back_populates="items")
 
 
@@ -90,6 +95,9 @@ class SavedAlignment(Base):
     # reproducible or comparable against another alignment.
     params = Column(Text, default="{}")
     notes = Column(Text, default="")
+
+    # JSON: the Helix build and library versions that computed it.
+    provenance = Column(Text, nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=_now)
 

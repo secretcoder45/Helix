@@ -186,6 +186,7 @@ export function AlignPage() {
                 gaps: result.gaps,
                 length: result.length,
                 params: { sequence_type: sequenceType, ...opts },
+                provenance: result.provenance,
               }}
             />
           )

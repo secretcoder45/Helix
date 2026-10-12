@@ -19,6 +19,7 @@ import {
 import { useEntity, useLiterature, useAlphafold } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
+import { ProvenanceLine } from '../components/Provenance'
 import { AddToTrayButton } from '../components/SequenceTrayUI'
 import { SequenceViewer } from '../components/SequenceViewer'
 import { FeatureTrack } from '../components/FeatureTrack'
@@ -385,6 +386,7 @@ export function EntityPage() {
                           description: entity.protein_name,
                           link: entity.links.uniprot,
                           retrieved_at: entity.retrieved_at,
+                          provenance: entity.provenance,
                         }}
                       />
                       <a
@@ -488,11 +490,22 @@ export function EntityPage() {
               </div>
 
               {entity.retrieved_at && (
-                <p className="pb-2 text-[11px] text-ink-3">
-                  Retrieved {new Date(entity.retrieved_at).toLocaleString()} from UniProt
-                  {entity.genes_detail?.length ? ' and NCBI Gene' : ''}. Identifiers
-                  cross-checked between sources.
-                </p>
+                <div className="space-y-1 pb-2 text-[11px] leading-relaxed text-ink-3">
+                  <p>
+                    Retrieved {new Date(entity.retrieved_at).toLocaleString()}. Identifiers
+                    cross-checked between sources.
+                  </p>
+                  <p>
+                    <ProvenanceLine provenance={entity.provenance} />
+                  </p>
+                  {entity.genes_detail?.[0]?.provenance && (
+                    <p>
+                      <ProvenanceLine
+                        provenance={{ ...entity.genes_detail[0].provenance, helix: null }}
+                      />
+                    </p>
+                  )}
+                </div>
               )}
             </motion.div>
           )}
