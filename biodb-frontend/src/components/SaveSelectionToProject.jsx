@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, Check, Plus, Loader2, FolderOpen } from 'lucide-react'
 import { useProjects, useCreateProject, useSaveItemsBulk } from '../lib/api'
+import { useAuth } from '../context/Auth'
+import { SignInDialog } from './SignInDialog'
 
 /**
  * Save many results into a project in one action — the bulk sibling of
@@ -13,8 +15,12 @@ export function SaveSelectionToProject({ items, onSaved }) {
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [savedTo, setSavedTo] = useState(null)
+  const { user } = useAuth()
+  // Saving needs an account; signing in happens in a dialog so nothing on
+  // this page is lost, then the project picker opens to finish the save.
+  const [signingIn, setSigningIn] = useState(false)
 
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [] } = useProjects(Boolean(user))
   const createProject = useCreateProject()
   const saveItems = useSaveItemsBulk()
 
@@ -42,8 +48,9 @@ export function SaveSelectionToProject({ items, onSaved }) {
 
   return (
     <div className="relative">
+      <SignInDialog open={signingIn} onOpenChange={setSigningIn} onSignedIn={() => setOpen(true)} />
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (user ? setOpen((o) => !o) : setSigningIn(true))}
         disabled={busy}
         className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-[12px] font-medium transition-colors disabled:opacity-50 ${
           savedTo

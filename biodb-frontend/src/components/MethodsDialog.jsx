@@ -174,9 +174,12 @@ function RecordsTab({ data }) {
   )
 }
 
-export function MethodsDialog({ project, open, onOpenChange }) {
+export function MethodsDialog({ project, shareToken, open, onOpenChange }) {
   const [tab, setTab] = useState('methods')
-  const { data, isLoading, isError } = useMethods(project?.id, open)
+  const { data, isLoading, isError } = useMethods(
+    shareToken ? { shareToken } : { projectId: project?.id },
+    open,
+  )
   const base = slug(project?.name || 'project')
 
   const actions = data && {

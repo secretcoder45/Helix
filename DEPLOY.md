@@ -85,8 +85,28 @@ Against the live site, not localhost — expect the first request to be slow
 | `ANTHROPIC_API_KEY` | Render | yes | Assistant; without it `/chat` errors |
 | `ALLOWED_ORIGINS` | Render | yes | Comma-separated; the Vercel URL |
 | `NCBI_API_KEY` | Render | no | Raises NCBI limit from 3/s to 10/s |
+| `REDIS_URL` | Render | no | Shared cache (e.g. Render Key Value). Unset: in-process cache, right for one instance |
+| `HELIX_DOI` | Render | no | The Zenodo DOI once minted; methods exports then cite it |
 | `PORT` | Render | auto | Injected; the app binds to it |
 | `VITE_API_URL` | Vercel | yes | Baked in at build time, so changing it needs a rebuild |
+
+## Accounts
+
+Username + password (no email). Passwords are scrypt hashes; sessions are
+random bearer tokens stored only as SHA-256 hashes, revoked on sign-out.
+Tools work signed out; projects, the methods export and share links need an
+account. Projects created before accounts existed have no owner and are
+hidden until assigned.
+
+Without email there is no self-service reset. From the backend's shell
+(Render → the service → Shell), with the app's `DATABASE_URL`:
+
+```
+python admin.py users                     # list accounts
+python admin.py reset-password <username> # prompts; signs them out everywhere
+python admin.py orphans                   # projects with no owner
+python admin.py assign-orphans <username> # give them to an account
+```
 
 ## Database migrations
 
@@ -102,7 +122,12 @@ fails if a model change is committed without its migration.
 
 - **Cold starts.** Free Render sleeps after 15 min idle. Upgrading to a paid
   instance ($7/mo) removes this if the app gets real users.
-- **Cache is per-process.** The in-memory TTL cache is not shared, so scaling
-  past one instance means each replica keeps its own. Swap it for Redis at
-  that point — `cache.py`'s decorator is the only call site.
-- **No auth.** Anyone with the URL can read and write every project.
+- **Cache is per-process unless `REDIS_URL` is set.** Fine for one instance;
+  set it before running more than one, or each replica fetches everything
+  itself.
+- **Sign-in throttling is per-process.** It moves to the shared cache if the
+  backend ever runs as more than one instance.
+- **No password recovery or account deletion yet.** Resets go through
+  `admin.py`; there is no email to send a reset link to.
+- **The Assistant is open to anyone.** It calls the paid Anthropic API, so if
+  usage grows it should require an account.

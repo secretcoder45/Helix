@@ -130,6 +130,16 @@ _LEGACY_DDL = [
 ]
 
 
+def _alembic_head():
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    cfg = Config(os.path.join(here, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(here, "migrations"))
+    return ScriptDirectory.from_config(cfg).get_current_head()
+
+
 def _columns(engine, table):
     return {c["name"] for c in sa.inspect(engine).get_columns(table)}
 
@@ -157,7 +167,7 @@ def test_database_from_before_migrations_is_upgraded_in_place(tmp_path):
     assert "provenance" in _columns(engine, "saved_alignments")
     with engine.connect() as c:
         assert c.execute(sa.text("SELECT external_id, provenance FROM saved_items")).all() == [("P38398", None)]
-        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == "0002_provenance"
+        assert c.execute(sa.text("SELECT version_num FROM alembic_version")).scalar() == _alembic_head()
 
 
 def test_migrations_produce_exactly_the_schema_the_models_describe(tmp_path):

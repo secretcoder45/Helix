@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FolderOpen,
@@ -11,6 +12,10 @@ import {
   BookOpenText,
   Table,
   GitCompareArrows,
+  Link2,
+  Copy,
+  Check,
+  LogIn,
 } from 'lucide-react'
 import {
   useProjects,
@@ -19,7 +24,9 @@ import {
   useDeleteProject,
   useRemoveItem,
   useRemoveAlignment,
+  useShareProject,
 } from '../lib/api'
+import { useAuth } from '../context/Auth'
 import { exportCsv, exportJson } from '../lib/export'
 import { MethodsDialog } from '../components/MethodsDialog'
 import { ProvenanceLine } from '../components/Provenance'
@@ -84,7 +91,7 @@ function AlignmentRows({ projectId, alignments }) {
         </span>
         <span className="tnum text-[11px] text-ink-3">{alignments.length}</span>
       </div>
-      <ul className="divide-y divide-line">
+      <ul className="divide-y divide-line last:overflow-hidden last:rounded-b-xl">
         {alignments.map((a) => (
           <li
             key={a.id}
@@ -123,6 +130,84 @@ function AlignmentRows({ projectId, alignments }) {
   )
 }
 
+/**
+ * Read-only share link for one project. The link is the whole credential, so
+ * the copy says exactly what it grants — and that stopping is immediate.
+ */
+function ShareControl({ project }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const share = useShareProject()
+  const url = project.share_token ? `${window.location.origin}/shared/${project.share_token}` : null
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1600)
+    } catch {
+      /* clipboard unavailable: the link is selectable in the field */
+    }
+  }
+
+  return (
+    <div className="relative">
+      <Button size="sm" onClick={() => setOpen((o) => !o)}>
+        <Link2 size={12} />
+        {url ? 'Shared' : 'Share'}
+        {url && <span className="h-1.5 w-1.5 rounded-full bg-ok" aria-hidden="true" />}
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-30 mt-1.5 w-80 rounded-xl border border-line bg-surface p-4 shadow-pop">
+            <p className="m-0 text-[13px] font-medium text-ink">Read-only link</p>
+            <p className="m-0 mt-1 text-[12px] leading-relaxed text-ink-2">
+              Anyone with the link can view this project and its methods export, without an
+              account. They can’t change anything.
+            </p>
+            {url ? (
+              <>
+                <div className="mt-3 flex gap-1.5">
+                  <input
+                    readOnly
+                    value={url}
+                    onFocus={(e) => e.target.select()}
+                    aria-label="Share link"
+                    className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2.5 py-1.5 font-mono text-[11px] text-ink outline-none"
+                  />
+                  <Button size="sm" onClick={copy}>
+                    {copied ? <Check size={12} className="text-ok" /> : <Copy size={12} />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+                <button
+                  onClick={() => share.mutate({ projectId: project.id, share: false })}
+                  disabled={share.isPending}
+                  className="mt-3 text-[12px] font-medium text-danger hover:underline disabled:opacity-50"
+                >
+                  Stop sharing
+                </button>
+                <span className="ml-2 text-[11px] text-ink-3">— the link stops working at once.</span>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="primary"
+                className="mt-3"
+                loading={share.isPending}
+                onClick={() => share.mutate({ projectId: project.id, share: true })}
+              >
+                Create link
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function ProjectItems({ projectId }) {
   const { data: project, isLoading } = useProject(projectId)
   const removeItem = useRemoveItem()
@@ -150,6 +235,7 @@ function ProjectItems({ projectId }) {
               <BookOpenText size={12} /> Methods & references
             </Button>
           )}
+          <ShareControl project={project} />
           <ExportMenu projectName={project.name} items={project.items} />
         </div>
       </div>
@@ -160,7 +246,7 @@ function ProjectItems({ projectId }) {
           Nothing saved yet. Cross-reference a gene, or run an alignment, and use Save.
         </p>
       ) : project.items.length === 0 ? null : (
-        <ul className="divide-y divide-line">
+        <ul className="divide-y divide-line last:overflow-hidden last:rounded-b-xl">
           {project.items.map((item) => (
             <li
               key={item.id}
@@ -215,8 +301,38 @@ function ProjectItems({ projectId }) {
   )
 }
 
+function SignedOut() {
+  return (
+    <Card className="border-dashed">
+      <EmptyState
+        icon={LogIn}
+        title="Sign in to keep projects"
+        description="Projects hold the records and alignments you save, with the database release each came from — and they belong to an account. Every tool works without one."
+        action={
+          <div className="flex items-center justify-center gap-2">
+            <Link
+              to="/signin?next=/projects"
+              className="inline-flex h-9 items-center rounded-lg bg-accent px-4 text-[13px] font-medium text-accent-contrast transition-colors hover:bg-accent-hover"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/signin?mode=register&next=/projects"
+              className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 text-[13px] font-medium text-ink transition-colors hover:border-line-strong"
+            >
+              Create account
+            </Link>
+          </div>
+        }
+      />
+    </Card>
+  )
+}
+
 export function ProjectsPage() {
-  const { data: projects = [], isLoading } = useProjects()
+  const { user, checking } = useAuth()
+  const { data: projects = [], isLoading: loadingProjects } = useProjects(Boolean(user))
+  const isLoading = checking || (Boolean(user) && loadingProjects)
   const createProject = useCreateProject()
   const deleteProject = useDeleteProject()
   const [newName, setNewName] = useState('')
@@ -237,21 +353,23 @@ export function ProjectsPage() {
         title="Projects"
         description="Saved records keep the database release, entry version and checksum they came from, so a project can be written straight into a methods section."
         actions={
-          <form onSubmit={create} className="flex items-center gap-2">
-            <Input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="New project…"
-              className="h-9 w-48"
-            />
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!newName.trim() || createProject.isPending}
-            >
-              <Plus size={14} /> Create
-            </Button>
-          </form>
+          user && (
+            <form onSubmit={create} className="flex items-center gap-2">
+              <Input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="New project…"
+                className="h-9 w-48"
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!newName.trim() || createProject.isPending}
+              >
+                <Plus size={14} /> Create
+              </Button>
+            </form>
+          )
         }
       />
 
@@ -262,6 +380,8 @@ export function ProjectsPage() {
               <Skeleton className="h-14 rounded-xl" />
               <Skeleton className="h-14 rounded-xl" />
             </div>
+          ) : !user ? (
+            <SignedOut />
           ) : projects.length === 0 ? (
             <Card className="border-dashed">
               <EmptyState
@@ -280,7 +400,7 @@ export function ProjectsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0 }}
                   >
-                    <Card className="overflow-hidden">
+                    <Card>
                       <div className="group flex items-center gap-2 px-4 py-3">
                         <button
                           onClick={() => setExpanded(expanded === p.id ? null : p.id)}

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BookmarkPlus, Check, Plus, Loader2, FolderOpen } from 'lucide-react'
 import { useProjects, useCreateProject, useSaveItem } from '../lib/api'
+import { useAuth } from '../context/Auth'
+import { SignInDialog } from './SignInDialog'
 
 /**
  * Save a result into a project, creating one inline if needed — collecting
@@ -11,8 +13,12 @@ export function SaveToProject({ result, size = 'md' }) {
   const [open, setOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [savedTo, setSavedTo] = useState(null)
+  const { user } = useAuth()
+  // Saving needs an account; signing in happens in a dialog so nothing on
+  // this page is lost, then the project picker opens to finish the save.
+  const [signingIn, setSigningIn] = useState(false)
 
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [] } = useProjects(Boolean(user))
   const createProject = useCreateProject()
   const saveItem = useSaveItem()
 
@@ -49,8 +55,9 @@ export function SaveToProject({ result, size = 'md' }) {
 
   return (
     <div className="relative">
+      <SignInDialog open={signingIn} onOpenChange={setSigningIn} onSignedIn={() => setOpen(true)} />
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => (user ? setOpen((o) => !o) : setSigningIn(true))}
         className={`inline-flex items-center gap-1.5 rounded-lg border font-medium transition-colors ${height} ${
           savedTo
             ? 'border-ok/30 bg-ok-soft text-ok'

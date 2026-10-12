@@ -5,6 +5,7 @@ import { Logo } from '../components/Logo'
 import { InsulinFigure } from '../components/InsulinFigure'
 import { useDarkMode } from '../hooks/useDarkMode'
 import { API_URL } from '../lib/config'
+import { getToken } from '../lib/session'
 
 /**
  * The front door.
@@ -117,7 +118,7 @@ const TOOL_GROUPS = [
       {
         to: '/projects',
         name: 'Projects',
-        desc: 'Entities and alignments saved with their parameters, source database and retrieval time.',
+        desc: 'Records and alignments saved with their source release and parameters — private to your account, shareable by read-only link.',
         via: null,
       },
       {
@@ -372,6 +373,8 @@ function ServerStatus({ state }) {
 
 function Header() {
   const [dark, setDark] = useDarkMode()
+  // Just "is a token stored?" — no network call on the landing page.
+  const signedIn = Boolean(getToken())
   return (
     <header className="sticky top-0 z-30 border-b border-line/70 bg-paper/85 backdrop-blur-md">
       <Container className="flex h-14 items-center justify-between gap-4">
@@ -406,6 +409,14 @@ function Header() {
           >
             {dark ? <Sun size={16} /> : <Moon size={16} />}
           </button>
+          {!signedIn && (
+            <Link
+              to="/signin"
+              className="hidden h-9 items-center rounded-lg px-3 text-[13px] font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink sm:inline-flex"
+            >
+              Sign in
+            </Link>
+          )}
           <Link
             to="/lookup"
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-ink px-3.5 text-[13px] font-medium text-paper transition-opacity hover:opacity-85"
@@ -449,7 +460,7 @@ function Hero({ server }) {
           className="land-rise m-0 mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-ink-3"
           style={{ '--d': '240ms' }}
         >
-          <span>Free, no sign-up</span>
+          <span>Free · tools need no account</span>
           <span aria-hidden="true">·</span>
           <a href={GITHUB} target="_blank" rel="noreferrer" className="hover:text-ink-2">
             Open source
@@ -725,7 +736,7 @@ function Checked() {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-5 py-4">
           <p className="m-0 text-[13.5px] text-ink-2">
-            <span className="tnum font-semibold text-ink">176</span> automated tests: the offline
+            <span className="tnum font-semibold text-ink">203</span> automated tests: the offline
             suite on every push, live checks against UniProt, NCBI and KEGG every week.
           </p>
           <Link
@@ -766,8 +777,8 @@ function FinalCta() {
             Start with one gene.
           </h2>
           <p className="m-0 mt-4 max-w-[46ch] text-[15px] leading-relaxed text-ink-2">
-            No account and nothing to install. Search, then follow the sequence wherever the
-            question goes.
+            Nothing to install, and no account until you want to save your work. Search, then
+            follow the sequence wherever the question goes.
           </p>
         </div>
         <LookupForm size="md" />

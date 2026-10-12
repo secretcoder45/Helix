@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { Logo } from '../components/Logo'
 import { SequenceTrayPanel } from '../components/SequenceTrayUI'
+import { AccountMenu } from '../components/AccountMenu'
 import { iconFor } from '../lib/databaseMeta'
 
 /**
@@ -173,8 +174,9 @@ export function AppShell({ databases, dark, setDark, collapsed, setCollapsed, on
             <kbd>⌘K</kbd>
           </button>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <SequenceTrayPanel />
+            <AccountMenu />
           </div>
         </header>
 

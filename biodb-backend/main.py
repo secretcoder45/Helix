@@ -2,9 +2,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional
 import os
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 
 import json
 import re
+import secrets
 
 from database_apis import db_connector
 from llm_service import llm
@@ -27,6 +29,7 @@ import primer_service
 from cache import cache_stats
 import db as db_module
 import models
+import auth
 import methods_service
 import provenance as prov
 from version import HELIX_VERSION, helix_build, library_versions
@@ -790,15 +793,134 @@ def blast_results(rid: str):
     return {"rid": rid, "hits": hits}
 
 
+# ---- Accounts ----
+# Username + password; see auth.py for how passwords and sessions are handled.
+# Declared `def`, not `async def`: password hashing is deliberately slow CPU
+# work and must run in the worker threadpool, not block the event loop.
+
+
+class Credentials(BaseModel):
+    username: str
+    password: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+def _user_out(user: models.User) -> dict:
+    return {
+        "id": user.id,
+        "username": user.username,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+@app.post("/auth/register", status_code=201)
+def register(payload: Credentials, request: Request, session: Session = Depends(db_module.get_db)):
+    address = auth.client_address(request)
+    wait = auth.SIGNUPS.blocked(address)
+    if wait:
+        raise auth.too_many(wait)
+
+    username = auth.normalise_username(payload.username)
+    problem = auth.validate_username(username) or auth.validate_password(payload.password, username)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    if session.query(models.User).filter(models.User.username == username).first():
+        raise HTTPException(status_code=409, detail="That username is taken.")
+
+    user = models.User(username=username, password_hash=auth.hash_password(payload.password))
+    session.add(user)
+    try:
+        session.commit()
+    except IntegrityError:  # registered concurrently between the check and here
+        session.rollback()
+        raise HTTPException(status_code=409, detail="That username is taken.")
+
+    auth.SIGNUPS.hit(address)
+    return {"token": auth.create_session(session, user), "user": _user_out(user)}
+
+
+@app.post("/auth/login")
+def login(payload: Credentials, session: Session = Depends(db_module.get_db)):
+    username = auth.normalise_username(payload.username)
+    wait = auth.LOGIN_FAILURES.blocked(username)
+    if wait:
+        raise auth.too_many(wait)
+
+    user = auth.authenticate(session, username, payload.password)
+    if not user:
+        auth.LOGIN_FAILURES.hit(username)
+        # One message for both cases, so it doesn't reveal which accounts exist.
+        raise HTTPException(status_code=401, detail="Username or password is incorrect.")
+
+    auth.LOGIN_FAILURES.clear(username)
+    return {"token": auth.create_session(session, user), "user": _user_out(user)}
+
+
+@app.post("/auth/logout")
+def logout(request: Request, session: Session = Depends(db_module.get_db)):
+    token = auth.bearer_token(request)
+    if token:
+        auth.revoke_session(session, token)
+    return {"signed_out": True}
+
+
+@app.get("/auth/me")
+def me(user: models.User = Depends(auth.current_user)):
+    return _user_out(user)
+
+
+@app.post("/auth/password")
+def change_password(
+    payload: PasswordChange,
+    request: Request,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    if not auth.verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+    problem = auth.validate_password(payload.new_password, user.username)
+    if problem:
+        raise HTTPException(status_code=400, detail=problem)
+    user.password_hash = auth.hash_password(payload.new_password)
+    session.commit()
+    # Anyone holding another session (a shared computer, a stolen token) is
+    # signed out; this one stays signed in.
+    auth.revoke_other_sessions(session, user, auth.bearer_token(request))
+    return {"changed": True}
+
+
 # ---- Projects (saved workspaces) ----
 # Lets a researcher save results across searches instead of losing them the
 # moment they navigate away — the foundation for batch review, export, and
 # citation later.
+#
+# Every project route goes through _owned_project, so ownership is checked in
+# exactly one place. Another user's project is a 404, not a 403: a 403 would
+# confirm that the id exists.
+
+
+def _owned_project(session: Session, project_id: str, user: models.User) -> models.Project:
+    project = (
+        session.query(models.Project)
+        .filter(models.Project.id == project_id, models.Project.owner_id == user.id)
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
 
 
 @app.post("/projects")
-async def create_project(payload: ProjectCreate, session: Session = Depends(db_module.get_db)):
-    project = models.Project(name=payload.name, description=payload.description)
+async def create_project(
+    payload: ProjectCreate,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    project = models.Project(name=payload.name, description=payload.description, owner_id=user.id)
     session.add(project)
     session.commit()
     session.refresh(project)
@@ -806,41 +928,106 @@ async def create_project(payload: ProjectCreate, session: Session = Depends(db_m
 
 
 @app.get("/projects")
-async def list_projects(session: Session = Depends(db_module.get_db)):
-    projects = session.query(models.Project).order_by(models.Project.created_at.desc()).all()
+async def list_projects(
+    user: models.User = Depends(auth.current_user), session: Session = Depends(db_module.get_db)
+):
+    projects = (
+        session.query(models.Project)
+        .filter(models.Project.owner_id == user.id)
+        .order_by(models.Project.created_at.desc())
+        .all()
+    )
     return [_serialize_project(p) for p in projects]
 
 
 @app.get("/projects/{project_id}")
-async def get_project(project_id: str, session: Session = Depends(db_module.get_db)):
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return _serialize_project(project, include_items=True)
+async def get_project(
+    project_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    return _serialize_project(_owned_project(session, project_id, user), include_items=True)
 
 
 @app.get("/projects/{project_id}/methods")
-async def project_methods(project_id: str, session: Session = Depends(db_module.get_db)):
+async def project_methods(
+    project_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
     """
     A methods section for a project: prose, references, and a records table.
 
     Built only from what the project's provenance recorded — see
     methods_service.py for the rules it holds to.
     """
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    project = _owned_project(session, project_id, user)
     return methods_service.build(_serialize_project(project, include_items=True))
 
 
 @app.delete("/projects/{project_id}")
-async def delete_project(project_id: str, session: Session = Depends(db_module.get_db)):
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+async def delete_project(
+    project_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    project = _owned_project(session, project_id, user)
     session.delete(project)
     session.commit()
     return {"deleted": project_id}
+
+
+# ---- Share links ----
+# A read-only view of one project for anyone holding the link — a reviewer,
+# a collaborator without an account. The token is the only credential, so it
+# is long and random, and revoking it is immediate.
+
+
+@app.post("/projects/{project_id}/share")
+async def share_project(
+    project_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    project = _owned_project(session, project_id, user)
+    if not project.share_token:
+        project.share_token = secrets.token_urlsafe(18)
+        session.commit()
+    return {"share_token": project.share_token}
+
+
+@app.delete("/projects/{project_id}/share")
+async def unshare_project(
+    project_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    project = _owned_project(session, project_id, user)
+    project.share_token = None
+    session.commit()
+    return {"share_token": None}
+
+
+def _shared_project(session: Session, token: str) -> models.Project:
+    project = session.query(models.Project).filter(models.Project.share_token == token).first() if token else None
+    if not project:
+        raise HTTPException(status_code=404, detail="This link is invalid or has been revoked.")
+    return project
+
+
+@app.get("/shared/{token}")
+async def get_shared_project(token: str, session: Session = Depends(db_module.get_db)):
+    project = _shared_project(session, token)
+    data = _serialize_project(project, include_items=True, for_owner=False)
+    data["owner"] = project.owner.username if project.owner else None
+    data["read_only"] = True
+    return data
+
+
+@app.get("/shared/{token}/methods")
+async def get_shared_methods(token: str, session: Session = Depends(db_module.get_db)):
+    project = _shared_project(session, token)
+    return methods_service.build(_serialize_project(project, include_items=True, for_owner=False))
 
 
 def _parse_retrieved_at(value: Optional[str]):
@@ -880,11 +1067,12 @@ def _build_saved_item(project_id: str, payload: SavedItemCreate) -> models.Saved
 
 @app.post("/projects/{project_id}/items")
 async def add_item(
-    project_id: str, payload: SavedItemCreate, session: Session = Depends(db_module.get_db)
+    project_id: str,
+    payload: SavedItemCreate,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
 ):
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _owned_project(session, project_id, user)
 
     item = _build_saved_item(project_id, payload)
     session.add(item)
@@ -895,7 +1083,10 @@ async def add_item(
 
 @app.post("/projects/{project_id}/items/bulk")
 async def add_items_bulk(
-    project_id: str, payload: BulkSavedItemsCreate, session: Session = Depends(db_module.get_db)
+    project_id: str,
+    payload: BulkSavedItemsCreate,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
 ):
     """
     Save many results into a project in one round trip.
@@ -904,9 +1095,7 @@ async def add_items_bulk(
     100-gene batch would mean 100 sequential requests against a free-tier
     backend that can be cold-starting. One request, one commit.
     """
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _owned_project(session, project_id, user)
 
     if not payload.items:
         raise HTTPException(status_code=400, detail="No items provided")
@@ -921,7 +1110,13 @@ async def add_items_bulk(
 
 
 @app.delete("/projects/{project_id}/items/{item_id}")
-async def remove_item(project_id: str, item_id: str, session: Session = Depends(db_module.get_db)):
+async def remove_item(
+    project_id: str,
+    item_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
+):
+    _owned_project(session, project_id, user)
     item = (
         session.query(models.SavedItem)
         .filter(models.SavedItem.id == item_id, models.SavedItem.project_id == project_id)
@@ -938,12 +1133,11 @@ async def remove_item(project_id: str, item_id: str, session: Session = Depends(
 async def add_alignment(
     project_id: str,
     payload: SavedAlignmentCreate,
+    user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
 ):
     """Save an alignment result into a project."""
-    project = session.query(models.Project).filter(models.Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    _owned_project(session, project_id, user)
 
     alignment = models.SavedAlignment(
         project_id=project_id,
@@ -973,8 +1167,12 @@ async def add_alignment(
 
 @app.delete("/projects/{project_id}/alignments/{alignment_id}")
 async def remove_alignment(
-    project_id: str, alignment_id: str, session: Session = Depends(db_module.get_db)
+    project_id: str,
+    alignment_id: str,
+    user: models.User = Depends(auth.current_user),
+    session: Session = Depends(db_module.get_db),
 ):
+    _owned_project(session, project_id, user)
     alignment = (
         session.query(models.SavedAlignment)
         .filter(
@@ -1037,7 +1235,9 @@ def _serialize_item(item: models.SavedItem) -> dict:
     }
 
 
-def _serialize_project(project: models.Project, include_items: bool = False) -> dict:
+def _serialize_project(
+    project: models.Project, include_items: bool = False, for_owner: bool = True
+) -> dict:
     data = {
         "id": project.id,
         "name": project.name,
@@ -1046,6 +1246,9 @@ def _serialize_project(project: models.Project, include_items: bool = False) -> 
         "item_count": len(project.items),
         "alignment_count": len(project.alignments),
     }
+    if for_owner:
+        # The share link is the owner's to see; it is the read-only credential.
+        data["share_token"] = project.share_token
     if include_items:
         data["items"] = [_serialize_item(i) for i in project.items]
         data["alignments"] = [_serialize_alignment(a) for a in project.alignments]

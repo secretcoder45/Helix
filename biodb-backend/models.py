@@ -15,6 +15,35 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+class User(Base):
+    """An account: a username and a password hash (see auth.py). No email —
+    deliberately the smallest identity that lets projects have an owner."""
+
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    username = Column(String, nullable=False, unique=True)  # stored lowercase
+    password_hash = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_now)
+
+    projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
+    sessions = relationship("AuthSession", back_populates="user", cascade="all, delete-orphan")
+
+
+class AuthSession(Base):
+    """A signed-in session. The id is the SHA-256 of the bearer token, never
+    the token itself, so the table alone can't be used to sign in."""
+
+    __tablename__ = "auth_sessions"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), default=_now)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    user = relationship("User", back_populates="sessions")
+
+
 class Project(Base):
     """A researcher's saved workspace — a named collection of items they've
     pulled from search results, plus free-text notes."""
@@ -25,6 +54,15 @@ class Project(Base):
     name = Column(String, nullable=False)
     description = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), default=_now)
+
+    # Nullable only for projects created before accounts existed; those have
+    # no owner and are not reachable through the API.
+    owner_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
+    # Capability token for a read-only share link. Stored in the clear because
+    # the owner needs to see the link again; revoking it is setting it to NULL.
+    share_token = Column(String, nullable=True, unique=True)
+
+    owner = relationship("User", back_populates="projects")
 
     items = relationship("SavedItem", back_populates="project", cascade="all, delete-orphan")
     alignments = relationship(

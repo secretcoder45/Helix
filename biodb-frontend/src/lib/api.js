@@ -2,10 +2,40 @@ import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { API_URL } from './config'
+import { SIGNED_OUT_EVENT, clearToken, getToken } from './session'
 
 export { API_URL }
 
 const client = axios.create({ baseURL: API_URL })
+
+// Read the token per request rather than once, so signing in or out takes
+// effect immediately for every hook.
+client.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// A 401 on a request that carried a token means the session ended (expired,
+// signed out elsewhere, password changed). Drop it and let the app react.
+client.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401 && error.config?.headers?.Authorization) {
+      clearToken()
+      window.dispatchEvent(new Event(SIGNED_OUT_EVENT))
+    }
+    return Promise.reject(error)
+  },
+)
+
+/** The server's explanation for a failed request, for showing to the user. */
+export function errorMessage(error, fallback = 'Something went wrong. Try again.') {
+  const detail = error?.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (!error?.response) return 'Can’t reach the server. It may be waking up — try again in a moment.'
+  return fallback
+}
 
 export function useDatabases() {
   return useQuery({
@@ -240,29 +270,106 @@ export function useServerProvenance() {
   })
 }
 
-/** Methods text, references and records table for a project. Always fresh: it
- * describes the project's current contents. */
-export function useMethods(projectId, enabled = true) {
+/** Methods text, references and records table for a project — the owner's
+ * (by id) or a shared one (by share token). Always fresh: it describes the
+ * project's current contents. */
+export function useMethods({ projectId, shareToken }, enabled = true) {
+  const path = shareToken ? `/shared/${shareToken}/methods` : `/projects/${projectId}/methods`
   return useQuery({
-    queryKey: ['methods', projectId],
+    queryKey: ['methods', shareToken ? `shared:${shareToken}` : projectId],
     queryFn: async () => {
-      const { data } = await client.get(`/projects/${projectId}/methods`)
+      const { data } = await client.get(path)
       return data
     },
-    enabled: Boolean(projectId) && enabled,
+    enabled: Boolean(projectId || shareToken) && enabled,
     staleTime: 0,
+  })
+}
+
+// ---- Accounts ----
+
+export function useMe(token) {
+  return useQuery({
+    queryKey: ['me', token],
+    queryFn: async () => {
+      const { data } = await client.get('/auth/me')
+      return data
+    },
+    enabled: Boolean(token),
+    staleTime: 5 * 60_000,
+    retry: (count, error) => error?.response?.status !== 401 && count < 2,
+  })
+}
+
+export function useSignIn() {
+  return useMutation({
+    mutationFn: async ({ mode, username, password }) => {
+      const { data } = await client.post(mode === 'register' ? '/auth/register' : '/auth/login', {
+        username,
+        password,
+      })
+      return data
+    },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const { data } = await client.post('/auth/password', payload)
+      return data
+    },
+  })
+}
+
+export async function serverSignOut() {
+  try {
+    await client.post('/auth/logout')
+  } catch {
+    /* already signed out server-side; the local token is cleared regardless */
+  }
+}
+
+// ---- Sharing ----
+
+export function useShareProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ projectId, share }) => {
+      const { data } = share
+        ? await client.post(`/projects/${projectId}/share`)
+        : await client.delete(`/projects/${projectId}/share`)
+      return data
+    },
+    onSuccess: (_d, { projectId }) => {
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['project', projectId] })
+    },
+  })
+}
+
+export function useSharedProject(token) {
+  return useQuery({
+    queryKey: ['shared', token],
+    queryFn: async () => {
+      const { data } = await client.get(`/shared/${token}`)
+      return data
+    },
+    enabled: Boolean(token),
+    retry: false,
   })
 }
 
 // ---- Projects ----
 
-export function useProjects() {
+export function useProjects(enabled = true) {
   return useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
       const { data } = await client.get('/projects')
       return data
     },
+    enabled,
   })
 }
 

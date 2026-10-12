@@ -170,6 +170,35 @@ const GROUPS = [
     ],
   },
   {
+    tool: 'Accounts & sharing',
+    file: 'test_auth.py',
+    checks: [
+      {
+        claim: 'Every project route — read, edit, delete, save, share, methods — returns “not found” for another user’s project, and leaves it untouched.',
+        against: 'invariant',
+        tests: ['test_another_users_project_is_invisible_on_every_route', 'test_projects_require_sign_in'],
+      },
+      {
+        claim: 'Passwords are stored only as salted scrypt hashes, and sessions only as SHA-256 hashes of their tokens, so the database alone can’t be used to sign in.',
+        against: 'invariant',
+        tests: ['test_password_hash_is_salted_scrypt_and_verifies', 'test_only_a_hash_of_the_session_token_is_stored'],
+      },
+      {
+        claim: 'Repeated wrong passwords lock that username for 15 minutes, and a wrong password or an unknown username get the same answer.',
+        against: 'invariant',
+        tests: [
+          'test_failed_sign_ins_are_throttled_per_username',
+          'test_wrong_password_and_unknown_user_get_the_same_answer',
+        ],
+      },
+      {
+        claim: 'A share link gives read-only access and nothing else; stopping sharing breaks it immediately.',
+        against: 'invariant',
+        tests: ['test_share_link_is_read_only_and_revocable'],
+      },
+    ],
+  },
+  {
     tool: 'Provenance & methods export',
     file: 'test_provenance.py',
     checks: [

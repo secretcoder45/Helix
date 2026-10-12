@@ -8,6 +8,7 @@ import { useDarkMode } from '../hooks/useDarkMode'
 import { AppShell } from './AppShell'
 import { CommandPalette } from '../components/CommandPalette'
 import { LogoMark } from '../components/Logo'
+import { AuthProvider } from '../context/Auth'
 
 /**
  * The application proper — everything behind the landing page.
@@ -38,6 +39,8 @@ const ChatPage = page(() => import('../pages/ChatPage'), 'ChatPage')
 const ProjectsPage = page(() => import('../pages/ProjectsPage'), 'ProjectsPage')
 const SearchPage = page(() => import('../pages/SearchPage'), 'SearchPage')
 const ValidationPage = page(() => import('../pages/ValidationPage'), 'ValidationPage')
+const SignInPage = page(() => import('../pages/SignInPage'), 'SignInPage')
+const SharedProjectPage = page(() => import('../pages/SharedProjectPage'), 'SharedProjectPage')
 
 // Created at module scope so it survives re-renders; it lives here rather
 // than in main.jsx so the landing page doesn't ship react-query.
@@ -142,37 +145,48 @@ function WorkspaceInner() {
     )
   }
 
+  const app = (
+    <AppShell
+      databases={databases}
+      dark={dark}
+      setDark={setDark}
+      collapsed={collapsed}
+      setCollapsed={setRail}
+      onOpenPalette={() => setPaletteOpen(true)}
+    >
+      <Suspense fallback={<PageFallback />}>
+        <Routes>
+          <Route path="lookup" element={<EntityPage />} />
+          <Route path="batch" element={<BatchPage />} />
+          <Route path="blast" element={<BlastPage />} />
+          <Route path="align" element={<AlignPage />} />
+          <Route path="properties" element={<PropertiesPage />} />
+          <Route path="dna" element={<DnaPage />} />
+          <Route path="compare" element={<ComparePage />} />
+          <Route path="phylo" element={<PhyloPage />} />
+          <Route path="restriction" element={<RestrictionPage />} />
+          <Route path="variant" element={<VariantPage />} />
+          <Route path="primers" element={<PrimerPage />} />
+          <Route path="chat" element={<ChatPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="validation" element={<ValidationPage />} />
+          <Route path="shared/:token" element={<SharedProjectPage />} />
+          <Route path="db/:database" element={<SearchPage databases={databases} />} />
+          <Route path="*" element={<Navigate to="/lookup" replace />} />
+        </Routes>
+      </Suspense>
+    </AppShell>
+  )
+
   return (
     <>
-      <AppShell
-        databases={databases}
-        dark={dark}
-        setDark={setDark}
-        collapsed={collapsed}
-        setCollapsed={setRail}
-        onOpenPalette={() => setPaletteOpen(true)}
-      >
-        <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="lookup" element={<EntityPage />} />
-            <Route path="batch" element={<BatchPage />} />
-            <Route path="blast" element={<BlastPage />} />
-            <Route path="align" element={<AlignPage />} />
-            <Route path="properties" element={<PropertiesPage />} />
-            <Route path="dna" element={<DnaPage />} />
-            <Route path="compare" element={<ComparePage />} />
-            <Route path="phylo" element={<PhyloPage />} />
-            <Route path="restriction" element={<RestrictionPage />} />
-            <Route path="variant" element={<VariantPage />} />
-            <Route path="primers" element={<PrimerPage />} />
-            <Route path="chat" element={<ChatPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="validation" element={<ValidationPage />} />
-            <Route path="db/:database" element={<SearchPage databases={databases} />} />
-            <Route path="*" element={<Navigate to="/lookup" replace />} />
-          </Routes>
-        </Suspense>
-      </AppShell>
+      {/* Sign-in is a full page, outside the app shell; everything else is inside it. */}
+      <Suspense fallback={<WakingSplash />}>
+        <Routes>
+          <Route path="signin" element={<SignInPage />} />
+          <Route path="*" element={app} />
+        </Routes>
+      </Suspense>
 
       <CommandPalette
         open={paletteOpen}
@@ -190,7 +204,9 @@ function WorkspaceInner() {
 export default function Workspace() {
   return (
     <QueryClientProvider client={queryClient}>
-      <WorkspaceInner />
+      <AuthProvider>
+        <WorkspaceInner />
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
