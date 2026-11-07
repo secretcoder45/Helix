@@ -265,7 +265,7 @@ export function EntityPage() {
   return (
     <>
       {/* Search header */}
-      <div className="shrink-0 border-b border-line bg-surface px-8 py-5">
+      <div className="shrink-0 border-b border-line bg-surface px-4 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="mx-auto max-w-5xl">
           <div className="relative">
             <Search
@@ -304,7 +304,7 @@ export function EntityPage() {
         </div>
       </div>
 
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-5xl">
           {!debounced && (
             <EmptyState

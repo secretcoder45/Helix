@@ -82,10 +82,11 @@ Against the live site, not localhost — expect the first request to be slow
 | Variable | Where | Required | Purpose |
 |---|---|---|---|
 | `DATABASE_URL` | Render | yes | Neon connection string |
-| `ANTHROPIC_API_KEY` | Render | yes | Assistant; without it `/chat` errors |
+| `ANTHROPIC_API_KEY` | Render | no | Only used by the Assistant, which is off unless `ASSISTANT_ENABLED` is set |
 | `ALLOWED_ORIGINS` | Render | yes | Comma-separated; the Vercel URL |
 | `NCBI_API_KEY` | Render | no | Raises NCBI limit from 3/s to 10/s |
 | `REDIS_URL` | Render | no | Shared cache (e.g. Render Key Value). Unset: in-process cache, right for one instance |
+| `ASSISTANT_ENABLED` | Render | no | `true` turns the Assistant (`/chat`) back on. Off by default: it spends the Anthropic key per question |
 | `HELIX_DOI` | Render | no | The Zenodo DOI once minted; methods exports then cite it |
 | `PORT` | Render | auto | Injected; the app binds to it |
 | `VITE_API_URL` | Vercel | yes | Baked in at build time, so changing it needs a rebuild |
@@ -98,10 +99,12 @@ Tools work signed out; projects, the methods export and share links need an
 account. Projects created before accounts existed have no owner and are
 hidden until assigned.
 
-Without email there is no self-service reset. From the backend's shell
-(Render → the service → Shell), with the app's `DATABASE_URL`:
+Without email there is no self-service reset. Free Render instances have no
+shell, so run these from `biodb-backend/` on your own machine, pointed at the
+production database with the Neon connection string:
 
 ```
+export DATABASE_URL='<Neon connection string>'
 python admin.py users                     # list accounts
 python admin.py reset-password <username> # prompts; signs them out everywhere
 python admin.py orphans                   # projects with no owner
@@ -129,5 +132,6 @@ fails if a model change is committed without its migration.
   backend ever runs as more than one instance.
 - **No password recovery or account deletion yet.** Resets go through
   `admin.py`; there is no email to send a reset link to.
-- **The Assistant is open to anyone.** It calls the paid Anthropic API, so if
-  usage grows it should require an account.
+- **The Assistant is switched off.** Hidden in the interface and `/chat`
+  returns 404 unless `ASSISTANT_ENABLED=true`. Before re-enabling, it should
+  require an account and a per-user daily limit.

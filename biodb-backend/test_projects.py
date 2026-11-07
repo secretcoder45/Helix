@@ -410,3 +410,31 @@ def test_alphafold_model_with_per_residue_confidence(client):
 @pytest.mark.network
 def test_alphafold_404s_for_unknown_accession(client):
     assert client.get("/alphafold/NOTAREALACCESSION").status_code == 404
+
+
+def test_assistant_is_off_unless_enabled(anon_client, monkeypatch):
+    """It spends a paid API key per question, so it must not answer by default."""
+    import main
+
+    called = []
+    monkeypatch.setattr(main.llm, "answer_query", lambda *a, **k: called.append(1) or "answer")
+    monkeypatch.delenv("ASSISTANT_ENABLED", raising=False)
+    assert anon_client.post("/chat", json={"query": "what is insulin"}).status_code == 404
+    assert called == []
+
+
+def test_databases_lists_only_searchable_categories(anon_client, monkeypatch):
+    """Every listed category must return results from a source it names."""
+    import main
+
+    listed = anon_client.get("/databases").json()
+    assert set(listed) == {"genomics", "proteins", "pathways"}
+    fake = [{"id": "1", "name": "x", "description": "d", "link": "l"}]
+    for fn in ("search_ncbi_gene", "search_uniprot_protein", "search_pdb_protein", "search_kegg_pathway"):
+        monkeypatch.setattr(main.db_connector, fn, lambda q, fake=fake: fake)
+    for key, meta in listed.items():
+        rows = main._run_search(key, "insulin")
+        assert rows, key
+        sources = {"UniProt" if r["database"] == "UniProt" else r["database"] for r in rows}
+        named = {"PDB" if a == "RCSB PDB" else a for a in meta["apis"]}
+        assert sources <= named, (key, sources, named)

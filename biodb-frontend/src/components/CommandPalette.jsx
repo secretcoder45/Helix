@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Command } from 'cmdk'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link2, Rows3, Dna, GitCompareArrows, FlaskConical, Grid3x3, GitBranch, Scissors, ShieldAlert, Microscope, Sparkles, FolderOpen, BadgeCheck, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
+import { Link2, CornerDownLeft, Clock, Loader2 } from 'lucide-react'
 import { iconFor } from '../lib/databaseMeta'
+import { ALL_PAGES } from '../lib/nav'
 import { useEntity } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SourceBadge } from './ui'
@@ -40,22 +41,6 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
     setOpen(false)
   }
 
-  const NAV = [
-    { to: '/lookup', icon: Link2, label: 'Cross-reference' },
-    { to: '/batch', icon: Rows3, label: 'Batch lookup' },
-    { to: '/blast', icon: Dna, label: 'BLAST search' },
-    { to: '/align', icon: GitCompareArrows, label: 'Pairwise alignment' },
-    { to: '/properties', icon: FlaskConical, label: 'Protein properties' },
-    { to: '/dna', icon: Dna, label: 'DNA toolkit' },
-    { to: '/variant', icon: ShieldAlert, label: 'Variant analysis' },
-    { to: '/primers', icon: Microscope, label: 'Primer design' },
-    { to: '/restriction', icon: Scissors, label: 'Restriction map' },
-    { to: '/compare', icon: Grid3x3, label: 'Dot plot' },
-    { to: '/phylo', icon: GitBranch, label: 'Phylogenetic tree' },
-    { to: '/chat', icon: Sparkles, label: 'Assistant' },
-    { to: '/projects', icon: FolderOpen, label: 'Projects' },
-    { to: '/validation', icon: BadgeCheck, label: 'Validation' },
-  ]
 
   return (
     <AnimatePresence>
@@ -132,9 +117,9 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
                   heading="Go to"
                   className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.09em] [&_[cmdk-group-heading]]:text-ink-3"
                 >
-                  {NAV.filter((n) =>
-                    n.label.toLowerCase().includes(query.toLowerCase()),
-                  ).map(({ to, icon: Icon, label }) => (
+                  {ALL_PAGES.filter((n) =>
+                    `${n.label} ${n.long || ''}`.toLowerCase().includes(query.toLowerCase()),
+                  ).map(({ to, icon: Icon, label, long }) => (
                     <Command.Item
                       key={to}
                       value={label}
@@ -142,7 +127,7 @@ export function CommandPalette({ open, setOpen, databases, recentSearches, onRec
                       className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-ink data-[selected=true]:bg-surface-2"
                     >
                       <Icon size={15} className="text-ink-3" />
-                      {label}
+                      {long || label}
                     </Command.Item>
                   ))}
                   {Object.entries(databases)

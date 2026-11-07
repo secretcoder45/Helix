@@ -179,7 +179,7 @@ export function EmptyState({ icon: Icon, title, description, action }) {
 
 export function PageHeader({ eyebrow, title, description, actions }) {
   return (
-    <header className="flex items-start justify-between gap-6 border-b border-line px-8 py-6">
+    <header className="flex shrink-0 flex-col gap-4 border-b border-line px-4 py-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-6 lg:px-8 lg:py-6">
       <div className="min-w-0">
         {eyebrow && (
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.09em] text-accent">
@@ -195,7 +195,7 @@ export function PageHeader({ eyebrow, title, description, actions }) {
           </p>
         )}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </header>
   )
 }

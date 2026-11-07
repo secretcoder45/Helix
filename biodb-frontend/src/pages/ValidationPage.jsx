@@ -346,7 +346,7 @@ export function ValidationPage() {
         title="How Helix is checked"
         description="Bugs in bioinformatics rarely crash — they return a plausible number that happens to be wrong. Each claim below names the tests that enforce it, and what the result is compared against."
       />
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-4xl space-y-8">
           <div className="grid gap-4 md:grid-cols-2">
             <ServerPanel />

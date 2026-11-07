@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FlaskConical, Check, X, GitCompareArrows, Trash2, Loader2, Plus } from 'lucide-react'
+import { Layers, Check, X, GitCompareArrows, Loader2, Plus } from 'lucide-react'
 import { useSequenceTray } from '../context/SequenceTray'
 import { API_URL } from '../lib/api'
 import axios from 'axios'
@@ -117,7 +117,8 @@ export function SequenceTrayPanel() {
         className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition-colors hover:border-accent hover:text-accent"
         title="Sequence tray"
       >
-        <FlaskConical size={14} />
+        <Layers size={14} />
+        <span className="hidden sm:inline">Tray</span>
         <span className="tnum">{count}</span>
       </button>
 
@@ -130,7 +131,7 @@ export function SequenceTrayPanel() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.13 }}
-              className="absolute right-5 top-14 z-50 w-80 overflow-hidden rounded-xl border border-line bg-surface shadow-pop"
+              className="absolute right-3 top-14 z-50 w-80 max-w-[calc(100vw-24px)] overflow-hidden sm:right-5 rounded-xl border border-line bg-surface shadow-pop"
             >
               <div className="flex items-center justify-between border-b border-line px-3 py-2">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-3">

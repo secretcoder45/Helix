@@ -249,35 +249,30 @@ async def cache_statistics():
 
 @app.get("/databases")
 async def list_databases():
-    """List available databases"""
-    databases = {
+    """
+    The database categories /search can query.
+
+    Only categories with a working search are listed, and `apis` names only
+    sources that are actually queried — the list is shown to users as
+    "what this searches", so it must not promise more.
+    """
+    return {
         "genomics": {
-            "name": "Genomics",
-            "description": "Gene sequences, variants, mutations",
-            "apis": ["NCBI Gene", "dbSNP"],
+            "name": "Genes",
+            "description": "Human gene records: symbol, name and summary",
+            "apis": ["NCBI Gene"],
         },
         "proteins": {
             "name": "Proteins",
-            "description": "Protein structures, annotations, interactions",
-            "apis": ["PDB", "UniProt"],
+            "description": "Protein entries and experimental structures",
+            "apis": ["UniProt", "RCSB PDB"],
         },
         "pathways": {
             "name": "Pathways",
-            "description": "Biological pathways and networks",
-            "apis": ["KEGG", "Reactome"],
-        },
-        "sequences": {
-            "name": "Sequences",
-            "description": "DNA/RNA/Protein sequences",
-            "apis": ["NCBI", "Ensembl"],
-        },
-        "drugs": {
-            "name": "Drugs & Compounds",
-            "description": "Drug information and compounds",
-            "apis": ["ChEMBL", "DrugBank"],
+            "description": "Biological pathway maps",
+            "apis": ["KEGG"],
         },
     }
-    return databases
 
 
 def _run_search(database: str, query: str) -> List[Dict]:
@@ -356,9 +351,19 @@ async def search_databases(query: SearchQuery):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# The Assistant spends a paid Anthropic API key on every question, and anyone
+# with the URL could call it. Hidden in the interface for now, and switched off
+# here too — hiding a button doesn't stop a direct request. Set
+# ASSISTANT_ENABLED=true to turn it back on.
+def _assistant_enabled() -> bool:
+    return os.getenv("ASSISTANT_ENABLED", "").strip().lower() in {"1", "true", "yes"}
+
+
 @app.post("/chat")
 async def chat(message: ChatMessage):
     """Chat with the LLM about bioinformatics, grounded in live database results."""
+    if not _assistant_enabled():
+        raise HTTPException(status_code=404, detail="The Assistant is not available.")
     try:
         # Pull a few results from each category so the LLM has real data to
         # ground its answer in, regardless of what kind of question it is.

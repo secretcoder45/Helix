@@ -81,7 +81,7 @@ export function ChatPage() {
         description="Answers are grounded in live UniProt, NCBI, and KEGG records, with the sources cited beneath each response."
       />
 
-      <Scroller className="px-8">
+      <Scroller className="px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl py-6">
           {messages.length === 0 ? (
             <div className="pt-6">
@@ -168,7 +168,7 @@ export function ChatPage() {
         </div>
       </Scroller>
 
-      <div className="shrink-0 border-t border-line bg-surface px-8 py-4">
+      <div className="shrink-0 border-t border-line bg-surface px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
         <form
           onSubmit={(e) => {
             e.preventDefault()

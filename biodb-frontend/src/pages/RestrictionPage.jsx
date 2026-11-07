@@ -60,7 +60,7 @@ export function RestrictionPage() {
         description="Which enzymes cut, where, and what the digest would look like on a gel."
       />
 
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-4xl space-y-4">
           <Card className="overflow-hidden">
             <form onSubmit={run}>

@@ -68,7 +68,7 @@ export function SearchPage({ databases }) {
         description={db.description}
       />
 
-      <div className="shrink-0 border-b border-line bg-surface px-8 py-4">
+      <div className="shrink-0 border-b border-line bg-surface px-4 py-3 sm:px-6 lg:px-8 lg:py-4">
         <div className="relative mx-auto max-w-4xl">
           <Search
             size={16}
@@ -90,7 +90,7 @@ export function SearchPage({ databases }) {
         </div>
       </div>
 
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-4xl">
           {!hasQuery && (
             <EmptyState

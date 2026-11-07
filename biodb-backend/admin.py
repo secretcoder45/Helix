@@ -7,8 +7,9 @@ be reset here, by whoever runs the server.
     python admin.py orphans
     python admin.py assign-orphans <username>
 
-Run with the same DATABASE_URL as the app (on Render: the service's Shell
-tab). reset-password prompts for the new password rather than taking it as
+Run with the same DATABASE_URL as the app. Free Render instances have no
+shell, so for production run this locally with DATABASE_URL set to the Neon
+connection string. reset-password prompts for the new password rather than taking it as
 an argument, so it never lands in shell history, and signs the user out
 everywhere.
 """

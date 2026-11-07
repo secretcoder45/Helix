@@ -42,7 +42,7 @@ export function ComparePage() {
         description="Repeats, inversions and rearrangements — the structure a single best alignment collapses away."
       />
 
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-3xl space-y-4">
           {entries.length < 2 ? (
             <Card className="border-dashed">

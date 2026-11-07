@@ -19,7 +19,7 @@ export function SharedProjectPage() {
 
   if (isError) {
     return (
-      <Scroller className="px-8 py-12">
+      <Scroller className="px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
         <div className="mx-auto max-w-xl">
           <Card className="border-dashed">
             <EmptyState
@@ -55,7 +55,7 @@ export function SharedProjectPage() {
         }
       />
 
-      <Scroller className="px-8 py-6">
+      <Scroller className="px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
         <div className="mx-auto max-w-4xl space-y-6">
           {isLoading && (
             <div className="space-y-2.5">

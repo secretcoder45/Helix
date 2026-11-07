@@ -35,7 +35,7 @@ const PhyloPage = page(() => import('../pages/PhyloPage'), 'PhyloPage')
 const RestrictionPage = page(() => import('../pages/RestrictionPage'), 'RestrictionPage')
 const VariantPage = page(() => import('../pages/VariantPage'), 'VariantPage')
 const PrimerPage = page(() => import('../pages/PrimerPage'), 'PrimerPage')
-const ChatPage = page(() => import('../pages/ChatPage'), 'ChatPage')
+// The Assistant (pages/ChatPage) is hidden for now; /chat falls through to /lookup.
 const ProjectsPage = page(() => import('../pages/ProjectsPage'), 'ProjectsPage')
 const SearchPage = page(() => import('../pages/SearchPage'), 'SearchPage')
 const ValidationPage = page(() => import('../pages/ValidationPage'), 'ValidationPage')
@@ -167,7 +167,6 @@ function WorkspaceInner() {
           <Route path="restriction" element={<RestrictionPage />} />
           <Route path="variant" element={<VariantPage />} />
           <Route path="primers" element={<PrimerPage />} />
-          <Route path="chat" element={<ChatPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="validation" element={<ValidationPage />} />
           <Route path="shared/:token" element={<SharedProjectPage />} />
