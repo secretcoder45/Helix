@@ -55,7 +55,8 @@ export function useSearch(database, query, limit = 10) {
       const { data } = await client.post('/search', { query, database, limit })
       // `unavailable` names sources that failed, so missing results aren't
       // mistaken for no results.
-      return { results: data.results, unavailable: data.unavailable || [] }
+      // `sources` lists every source searched, in column order.
+      return { results: data.results, sources: data.sources || [], unavailable: data.unavailable || [] }
     },
     enabled: Boolean(database && query && query.trim().length > 1),
     staleTime: 60_000,

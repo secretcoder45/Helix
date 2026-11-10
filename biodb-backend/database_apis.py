@@ -168,7 +168,13 @@ class DatabaseConnector:
             url = f"{DatabaseConnector.BASE_URLS['ncbi']}/esearch.fcgi"
             params = {
                 "db": "gene",
-                "term": f"{gene_name}[Gene Name] AND human[Organism]",
+                # Symbol or full name: "INS" and "insulin" both find INS. Gene
+                # Name alone matched only symbols, so searching "insulin"
+                # reported no human gene. alive[prop] drops discontinued
+                # records. (NCBI Gene has no [Description] field — it is
+                # silently ignored, which returns unrelated popular genes.)
+                "term": f"({gene_name}[Gene Name] OR {gene_name}[Gene Full Name]) "
+                "AND human[Organism] AND alive[prop]",
                 "retmode": "json",
                 "retmax": 5,
             }
@@ -272,6 +278,58 @@ class DatabaseConnector:
         except Exception as e:
             raise _failed("UniProt", e) from e
 
+    _PDB_METHODS = {
+        "X-RAY DIFFRACTION": "X-ray",
+        "SOLUTION NMR": "NMR",
+        "SOLID-STATE NMR": "Solid-state NMR",
+        "ELECTRON MICROSCOPY": "Cryo-EM",
+        "NEUTRON DIFFRACTION": "Neutron",
+    }
+
+    @staticmethod
+    def _pdb_details(identifiers: List[str]) -> Dict[str, Dict]:
+        """
+        Title, method, resolution and release year for PDB entries, in one
+        GraphQL request. The search API returns bare IDs, which on their own
+        tell a researcher nothing about which structure to open.
+
+        An enhancement, not the result: if it fails, the search still returns
+        its IDs and this returns {}.
+        """
+        if not identifiers:
+            return {}
+        query = (
+            "query($ids: [String!]!) { entries(entry_ids: $ids) { rcsb_id struct { title } "
+            "exptl { method } rcsb_entry_info { resolution_combined } "
+            "rcsb_accession_info { initial_release_date } } }"
+        )
+        try:
+            r = requests.post(
+                "https://data.rcsb.org/graphql",
+                json={"query": query, "variables": {"ids": identifiers}},
+                timeout=8,
+            )
+            if r.status_code != 200:
+                return {}
+            out = {}
+            for e in (r.json().get("data") or {}).get("entries") or []:
+                method = ((e.get("exptl") or [{}])[0] or {}).get("method", "")
+                resolution = ((e.get("rcsb_entry_info") or {}).get("resolution_combined") or [None])[0]
+                released = ((e.get("rcsb_accession_info") or {}).get("initial_release_date") or "")[:4]
+                parts = [
+                    DatabaseConnector._PDB_METHODS.get(method, method.capitalize()) if method else None,
+                    f"{resolution:.2g} Å" if isinstance(resolution, (int, float)) else None,
+                    released or None,
+                ]
+                out[e.get("rcsb_id")] = {
+                    "title": ((e.get("struct") or {}).get("title") or "").strip() or None,
+                    "meta": " · ".join(p for p in parts if p) or None,
+                }
+            return out
+        except Exception as e:
+            log.warning("PDB details lookup failed: %s", e)
+            return {}
+
     @staticmethod
     @cached("pdb")
     def search_pdb_protein(protein_name: str) -> List[Dict]:
@@ -298,15 +356,20 @@ class DatabaseConnector:
 
             data = response.json()
             now = _now_iso()
+            identifiers = [r.get("identifier") for r in data.get("result_set", [])[:5]]
+            details = DatabaseConnector._pdb_details(identifiers)
             results = []
 
-            for result in data.get("result_set", [])[:5]:
-                identifier = result.get("identifier")
+            for identifier in identifiers:
+                info = details.get(identifier, {})
                 results.append(
                     {
                         "id": identifier,
                         "name": f"PDB {identifier}",
-                        "description": protein_name,
+                        # The structure's own title; the search term only if
+                        # the titles couldn't be fetched.
+                        "description": info.get("title") or protein_name,
+                        "meta": info.get("meta"),
                         "link": f"https://www.rcsb.org/structure/{identifier}",
                         "retrieved_at": now,
                         "provenance": prov.record(

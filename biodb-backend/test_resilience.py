@@ -184,3 +184,86 @@ def test_browser_errors_are_logged(anon_client, caplog):
         res = anon_client.post("/client-errors", json={"message": "TypeError: x is undefined", "page": "/align"})
     assert res.status_code == 204
     assert any("TypeError: x is undefined" in r.getMessage() for r in caplog.records)
+
+
+# ---- Search columns ----
+
+
+def _rows(prefix, n):
+    return [{"id": f"{prefix}{i}", "name": f"{prefix}{i}", "description": "d", "link": "l"} for i in range(n)]
+
+
+def test_all_databases_search_returns_one_column_per_source(anon_client, monkeypatch):
+    import time as _time
+
+    def slow(rows):
+        def fetch(q):
+            _time.sleep(0.4)
+            return rows
+        return fetch
+
+    monkeypatch.setattr(db_connector, "search_uniprot_protein", slow(_rows("U", 2)))
+    monkeypatch.setattr(db_connector, "search_pdb_protein", slow([]))
+    monkeypatch.setattr(db_connector, "search_ncbi_gene", slow(_rows("G", 1)))
+    monkeypatch.setattr(db_connector, "search_kegg_pathway", slow(_rows("K", 1)))
+
+    started = _time.monotonic()
+    body = anon_client.post("/search", json={"query": "insulin", "database": "all"}).json()
+    elapsed = _time.monotonic() - started
+
+    # Every source is a column, in order — including PDB, which found nothing.
+    assert body["sources"] == ["UniProt", "PDB", "NCBI Gene", "KEGG"]
+    assert [r["database"] for r in body["results"]] == ["UniProt", "UniProt", "NCBI Gene", "KEGG"]
+    # Searched in parallel: four 0.4 s sources take ~0.4 s, not 1.6 s.
+    assert elapsed < 1.0, elapsed
+
+
+def test_the_limit_applies_per_source(anon_client, monkeypatch):
+    monkeypatch.setattr(db_connector, "search_uniprot_protein", lambda q: _rows("U", 8))
+    monkeypatch.setattr(db_connector, "search_pdb_protein", lambda q: _rows("P", 8))
+    body = anon_client.post("/search", json={"query": "x", "database": "proteins", "limit": 5}).json()
+    counts = {s: sum(r["database"] == s for r in body["results"]) for s in body["sources"]}
+    assert counts == {"UniProt": 5, "PDB": 5}
+
+
+def test_one_source_down_in_all_databases_costs_only_its_column(anon_client, monkeypatch):
+    def down(q):
+        raise SourceUnavailable("KEGG")
+
+    monkeypatch.setattr(db_connector, "search_uniprot_protein", lambda q: _rows("U", 1))
+    monkeypatch.setattr(db_connector, "search_pdb_protein", lambda q: [])
+    monkeypatch.setattr(db_connector, "search_ncbi_gene", lambda q: [])
+    monkeypatch.setattr(db_connector, "search_kegg_pathway", down)
+    body = anon_client.post("/search", json={"query": "x", "database": "all"}).json()
+    assert body["unavailable"] == ["KEGG"] and len(body["results"]) == 1
+
+
+def test_unknown_database_is_404(anon_client):
+    assert anon_client.post("/search", json={"query": "x", "database": "drugs"}).status_code == 404
+
+
+def test_pdb_results_carry_titles_and_survive_without_them(http):
+    entry = {"rcsb_id": "1ABC", "struct": {"title": "Crystal structure of insulin"},
+             "exptl": [{"method": "X-RAY DIFFRACTION"}], "rcsb_entry_info": {"resolution_combined": [2.2]},
+             "rcsb_accession_info": {"initial_release_date": "1999-05-18T00:00:00Z"}}
+
+    def ok(url, kw):
+        if "rcsbsearch" in url:
+            return FakeResponse(200, {"result_set": [{"identifier": "1ABC"}]})
+        return FakeResponse(200, {"data": {"entries": [entry]}})
+
+    http(ok)
+    (row,) = db_connector.search_pdb_protein(unique())
+    assert row["description"] == "Crystal structure of insulin"
+    assert row["meta"] == "X-ray · 2.2 Å · 1999"
+
+    def titles_down(url, kw):
+        if "rcsbsearch" in url:
+            return FakeResponse(200, {"result_set": [{"identifier": "1ABC"}]})
+        return FakeResponse(503)
+
+    http(titles_down)
+    query = unique()
+    (row,) = db_connector.search_pdb_protein(query)
+    # The details call is an enhancement: its failure costs the title, not the result.
+    assert row["id"] == "1ABC" and row["description"] == query and row["meta"] is None

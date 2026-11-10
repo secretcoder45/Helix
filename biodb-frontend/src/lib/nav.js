@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Boxes,
+  Columns4,
   Crosshair,
   Dna,
   Fingerprint,
@@ -71,6 +72,7 @@ export const NAV_FOOTER = [
 ]
 
 export const DATABASE_ICONS = {
+  all: Columns4,
   genomics: Fingerprint,
   proteins: Boxes,
   pathways: Waypoints,

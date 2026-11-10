@@ -428,7 +428,7 @@ def test_databases_lists_only_searchable_categories(anon_client, monkeypatch):
     import main
 
     listed = anon_client.get("/databases").json()
-    assert set(listed) == {"genomics", "proteins", "pathways"}
+    assert set(listed) == {"all", "genomics", "proteins", "pathways"}
     fake = [{"id": "1", "name": "x", "description": "d", "link": "l"}]
     for fn in ("search_ncbi_gene", "search_uniprot_protein", "search_pdb_protein", "search_kegg_pathway"):
         monkeypatch.setattr(main.db_connector, fn, lambda q, fake=fake: fake)

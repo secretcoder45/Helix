@@ -352,6 +352,11 @@ def list_databases():
     "what this searches", so it must not promise more.
     """
     return {
+        "all": {
+            "name": "All databases",
+            "description": "One query, every source side by side",
+            "apis": ["UniProt", "RCSB PDB", "NCBI Gene", "KEGG"],
+        },
         "genomics": {
             "name": "Genes",
             "description": "Human gene records: symbol, name and summary",
@@ -376,6 +381,12 @@ _SEARCH_SOURCES = {
     "genomics": [("NCBI Gene", "search_ncbi_gene")],
     "pathways": [("KEGG", "search_kegg_pathway")],
 }
+# Everything at once, shown as one column per source.
+_SEARCH_SOURCES["all"] = [
+    *_SEARCH_SOURCES["proteins"],
+    *_SEARCH_SOURCES["genomics"],
+    *_SEARCH_SOURCES["pathways"],
+]
 
 
 def _run_search(database: str, query: str):
@@ -386,12 +397,24 @@ def _run_search(database: str, query: str):
     being down costs only its own results — and is named, rather than its
     absence passing silently as "no matches".
     """
-    results, unavailable = [], []
-    for label, fetch in _SEARCH_SOURCES.get(database, []):
+    sources = _SEARCH_SOURCES.get(database, [])
+
+    def fetch_one(source):
+        label, fetch = source
         try:
-            rows = getattr(db_connector, fetch)(query)
+            return label, getattr(db_connector, fetch)(query), None
         except SourceUnavailable as e:
-            unavailable.append(e.source)
+            return label, [], e.source
+
+    # In parallel: four sources take as long as the slowest, not the sum.
+    # NCBI's own rate limiter still applies inside the connector.
+    with ThreadPoolExecutor(max_workers=max(1, len(sources))) as pool:
+        answers = list(pool.map(fetch_one, sources))
+
+    results, unavailable = [], []
+    for label, rows, failed in answers:  # map() keeps source order
+        if failed:
+            unavailable.append(failed)
             continue
         results.extend(
             {
@@ -399,6 +422,8 @@ def _run_search(database: str, query: str):
                 "name": r["name"],
                 "database": label,
                 "description": r["description"],
+                # Short source-specific facts, e.g. "X-ray · 2.2 Å · 1999" for PDB.
+                "meta": r.get("meta"),
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
                 "provenance": r.get("provenance"),
@@ -411,14 +436,29 @@ def _run_search(database: str, query: str):
 @app.post("/search", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
 def search_databases(query: SearchQuery):
     """Search across live bioinformatics databases"""
+    if query.database not in _SEARCH_SOURCES:
+        raise HTTPException(status_code=404, detail=f"Unknown database '{query.database}'")
     results, unavailable = _run_search(query.database, query.query)
     if unavailable and not results:
         # Nothing answered: an error, not an empty result.
         raise SourceUnavailable(", ".join(unavailable))
+
+    # The limit applies per source, so a source with many hits can't crowd
+    # another out of its column.
+    kept, per_source = [], {}
+    for r in results:
+        n = per_source.get(r["database"], 0)
+        if n < query.limit:
+            kept.append(r)
+            per_source[r["database"]] = n + 1
+
     return {
         "query": query.query,
         "database": query.database,
-        "results": results[: query.limit],
+        # Every source searched, in display order — including ones that found
+        # nothing, so the interface can say "no matches in PDB" in its column.
+        "sources": [label for label, _ in _SEARCH_SOURCES[query.database]],
+        "results": kept,
         # Sources that failed: their results are missing, not absent.
         "unavailable": unavailable,
     }
