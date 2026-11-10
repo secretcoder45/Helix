@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Search, Loader2, SearchX, AlertCircle } from 'lucide-react'
-import { useSearch } from '../lib/api'
+import { errorMessage, useSearch } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { DetailPanel } from '../components/DetailPanel'
 import { iconFor } from '../lib/databaseMeta'
-import { Card, EmptyState, PageHeader, Scroller, Skeleton, SourceBadge } from '../components/ui'
+import { Card, EmptyState, PageHeader, Scroller, Skeleton, SourceBadge, SourceNotice } from '../components/ui'
 
 const RECENT_KEY = 'helix-recent-searches'
 
@@ -46,7 +46,9 @@ export function SearchPage({ databases }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [database])
 
-  const { data: results, isLoading, isFetching, isError } = useSearch(database, debounced)
+  const { data, isLoading, isFetching, isError, error } = useSearch(database, debounced)
+  const results = data?.results
+  const unavailable = data?.unavailable || []
 
   useEffect(() => {
     if (debounced && debounced.trim().length > 1) pushRecent({ database, query: debounced })
@@ -114,12 +116,18 @@ export function SearchPage({ databases }) {
                 <AlertCircle size={16} className="mt-0.5 shrink-0 text-warn" />
                 <div>
                   <p className="text-[13px] font-semibold text-ink">Search failed</p>
-                  <p className="mt-0.5 text-[12px] text-ink-2">
-                    The source APIs may be slow or unavailable. Try again shortly.
-                  </p>
+                  <p className="mt-0.5 text-[12px] text-ink-2">{errorMessage(error)}</p>
                 </div>
               </div>
             </Card>
+          )}
+
+          {hasQuery && unavailable.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {unavailable.map((source) => (
+                <SourceNotice key={source} source={source} what="its results are" />
+              ))}
+            </div>
           )}
 
           {hasQuery && !isLoading && results?.length === 0 && (

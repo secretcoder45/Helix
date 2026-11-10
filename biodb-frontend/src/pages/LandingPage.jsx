@@ -736,7 +736,7 @@ function Checked() {
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-5 py-4">
           <p className="m-0 text-[13.5px] text-ink-2">
-            <span className="tnum font-semibold text-ink">205</span> automated tests: the offline
+            <span className="tnum font-semibold text-ink">220</span> automated tests: the offline
             suite on every push, live checks against UniProt, NCBI and KEGG every week.
           </p>
           <Link

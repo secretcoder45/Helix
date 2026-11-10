@@ -53,7 +53,9 @@ export function useSearch(database, query, limit = 10) {
     queryKey: ['search', database, query, limit],
     queryFn: async () => {
       const { data } = await client.post('/search', { query, database, limit })
-      return data.results
+      // `unavailable` names sources that failed, so missing results aren't
+      // mistaken for no results.
+      return { results: data.results, unavailable: data.unavailable || [] }
     },
     enabled: Boolean(database && query && query.trim().length > 1),
     staleTime: 60_000,

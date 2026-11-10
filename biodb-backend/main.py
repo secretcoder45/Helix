@@ -4,6 +4,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,10 +13,13 @@ import os
 from dotenv import load_dotenv
 
 import json
+import logging
 import re
 import secrets
+import time
+import uuid
 
-from database_apis import db_connector
+from database_apis import SourceUnavailable, db_connector
 from llm_service import llm
 import xml.etree.ElementTree as ET
 import blast_service
@@ -31,6 +35,8 @@ import db as db_module
 import models
 import auth
 import methods_service
+import ratelimit
+from ratelimit import limit
 import provenance as prov
 from version import HELIX_VERSION, helix_build, library_versions
 
@@ -55,6 +61,27 @@ def _extract_search_terms(query: str) -> str:
 
 load_dotenv()
 
+# Logs go to stdout, which is what Render's log view shows. Errors used to be
+# bare print() calls, or swallowed entirely.
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger("helix")
+
+# Error tracking, if configured. Sentry's logging integration also picks up
+# ERROR-level log records, so a source failing repeatedly shows up there too.
+if os.getenv("SENTRY_DSN"):
+    import sentry_sdk
+
+    sentry_sdk.init(
+        dsn=os.getenv("SENTRY_DSN"),
+        release=f"helix@{HELIX_VERSION}",
+        environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+        traces_sample_rate=0.0,
+        send_default_pii=False,
+    )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +90,44 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Helix API", version=HELIX_VERSION, lifespan=lifespan)
+
+# ---- Errors and request logging ----
+# Registered before CORS on purpose: middleware added later wraps earlier
+# middleware, so CORS ends up outermost and even a 500 from here carries CORS
+# headers. Without that, a browser reports a crash as a CORS error.
+
+SLOW_REQUEST_SECONDS = 5.0
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.exception("Unhandled error [%s] %s %s", request_id, request.method, request.url.path)
+        response = JSONResponse(
+            status_code=500,
+            content={
+                "detail": f"Something went wrong on our side. If it keeps happening, report reference {request_id}.",
+                "request_id": request_id,
+            },
+        )
+    elapsed = time.perf_counter() - started
+    if elapsed > SLOW_REQUEST_SECONDS:
+        log.warning("Slow request [%s] %s %s took %.1fs", request_id, request.method, request.url.path, elapsed)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.exception_handler(SourceUnavailable)
+def source_unavailable(request: Request, exc: SourceUnavailable):
+    # 503, naming the source, so the interface can say "UniProt isn't
+    # responding" instead of showing an empty result as if nothing matched.
+    return JSONResponse(status_code=503, content={"detail": str(exc), "source": exc.source})
+
 
 # Enable CORS for frontend
 # Origins come from the environment so the deployed frontend isn't blocked.
@@ -82,6 +147,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 
@@ -218,9 +284,38 @@ class SavedAlignmentCreate(BaseModel):
 
 
 # ---- Routes ----
+# Every route is a plain `def`, never `async def`. They all do blocking work —
+# HTTP calls to UniProt/NCBI through `requests`, database queries, password
+# hashing — and FastAPI runs plain `def` routes in a thread pool. Declared
+# `async`, that blocking work ran on the event loop itself and stalled every
+# other request: a health check sent during one uncached gene lookup waited
+# 3.3 s for it. test_concurrency.py guards against it coming back.
 @app.get("/health")
-async def health_check():
+def health_check():
     return {"status": "ok", "version": HELIX_VERSION}
+
+
+class ClientError(BaseModel):
+    message: str
+    page: str = ""
+    stack: str = ""
+
+
+@app.post("/client-errors", status_code=204, dependencies=[Depends(limit(ratelimit.CLIENT_ERRORS))])
+def report_client_error(payload: ClientError, request: Request):
+    """
+    A crash in the browser, reported by the page's error boundary.
+
+    Logged at ERROR, so it lands in the server log next to backend errors
+    (and in Sentry, when configured) without the frontend shipping a tracking
+    SDK of its own. Truncated: this is a public endpoint.
+    """
+    log.error(
+        "Browser error on %s: %s\n%s",
+        payload.page[:200],
+        payload.message[:500],
+        payload.stack[:2000],
+    )
 
 
 @app.get("/provenance")
@@ -242,13 +337,13 @@ def current_provenance():
 
 
 @app.get("/cache/stats")
-async def cache_statistics():
+def cache_statistics():
     """Visibility into the in-memory API response cache."""
     return cache_stats()
 
 
 @app.get("/databases")
-async def list_databases():
+def list_databases():
     """
     The database categories /search can query.
 
@@ -275,80 +370,58 @@ async def list_databases():
     }
 
 
-def _run_search(database: str, query: str) -> List[Dict]:
-    """Search one database category. Shared by /search and /chat."""
-    results = []
+# Which sources each category searches: (label shown on results, fetch function).
+_SEARCH_SOURCES = {
+    "proteins": [("UniProt", "search_uniprot_protein"), ("PDB", "search_pdb_protein")],
+    "genomics": [("NCBI Gene", "search_ncbi_gene")],
+    "pathways": [("KEGG", "search_kegg_pathway")],
+}
 
-    if database == "proteins":
-        results = [
-            {
-                "id": r["id"],
-                "name": r["name"],
-                "database": "UniProt",
-                "description": r["description"],
-                "link": r["link"],
-                "retrieved_at": r.get("retrieved_at"),
-                "provenance": r.get("provenance"),
-            }
-            for r in db_connector.search_uniprot_protein(query)
-        ]
+
+def _run_search(database: str, query: str):
+    """
+    Search one database category. Shared by /search and /chat.
+
+    Returns (results, unavailable). Each source is tried on its own, so one
+    being down costs only its own results — and is named, rather than its
+    absence passing silently as "no matches".
+    """
+    results, unavailable = [], []
+    for label, fetch in _SEARCH_SOURCES.get(database, []):
+        try:
+            rows = getattr(db_connector, fetch)(query)
+        except SourceUnavailable as e:
+            unavailable.append(e.source)
+            continue
         results.extend(
             {
                 "id": r["id"],
                 "name": r["name"],
-                "database": "PDB",
+                "database": label,
                 "description": r["description"],
                 "link": r["link"],
                 "retrieved_at": r.get("retrieved_at"),
                 "provenance": r.get("provenance"),
             }
-            for r in db_connector.search_pdb_protein(query)
+            for r in rows
         )
-
-    elif database == "genomics":
-        results = [
-            {
-                "id": r["id"],
-                "name": r["name"],
-                "database": "NCBI Gene",
-                "description": r["description"],
-                "link": r["link"],
-                "retrieved_at": r.get("retrieved_at"),
-                "provenance": r.get("provenance"),
-            }
-            for r in db_connector.search_ncbi_gene(query)
-        ]
-
-    elif database == "pathways":
-        results = [
-            {
-                "id": r["id"],
-                "name": r["name"],
-                "database": "KEGG",
-                "description": r["description"],
-                "link": r["link"],
-                "retrieved_at": r.get("retrieved_at"),
-                "provenance": r.get("provenance"),
-            }
-            for r in db_connector.search_kegg_pathway(query)
-        ]
-
-    return results
+    return results, unavailable
 
 
-@app.post("/search")
-async def search_databases(query: SearchQuery):
+@app.post("/search", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
+def search_databases(query: SearchQuery):
     """Search across live bioinformatics databases"""
-    try:
-        results = _run_search(query.database, query.query)
-        return {
-            "query": query.query,
-            "database": query.database,
-            "results": results[: query.limit],
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    results, unavailable = _run_search(query.database, query.query)
+    if unavailable and not results:
+        # Nothing answered: an error, not an empty result.
+        raise SourceUnavailable(", ".join(unavailable))
+    return {
+        "query": query.query,
+        "database": query.database,
+        "results": results[: query.limit],
+        # Sources that failed: their results are missing, not absent.
+        "unavailable": unavailable,
+    }
 
 
 # The Assistant spends a paid Anthropic API key on every question, and anyone
@@ -360,7 +433,7 @@ def _assistant_enabled() -> bool:
 
 
 @app.post("/chat")
-async def chat(message: ChatMessage):
+def chat(message: ChatMessage):
     """Chat with the LLM about bioinformatics, grounded in live database results."""
     if not _assistant_enabled():
         raise HTTPException(status_code=404, detail="The Assistant is not available.")
@@ -370,7 +443,7 @@ async def chat(message: ChatMessage):
         search_terms = _extract_search_terms(message.query)
         search_results = []
         for database in ("proteins", "genomics", "pathways"):
-            search_results.extend(_run_search(database, search_terms)[:3])
+            search_results.extend(_run_search(database, search_terms)[0][:3])
 
         response = llm.answer_query(message.query, search_results)
 
@@ -384,8 +457,8 @@ async def chat(message: ChatMessage):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/entity/{query}")
-async def get_entity(query: str):
+@app.get("/entity/{query}", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
+def get_entity(query: str):
     """
     One lookup, cross-referenced across databases.
 
@@ -394,37 +467,38 @@ async def get_entity(query: str):
     UniProt entry and returns the linked gene record, structures, and pathways
     together.
     """
+    entity = db_connector.resolve_entity(query)  # UniProt down -> 503 (handler above)
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"No entity found for '{query}'")
+    # A copy: the cached entry must not collect per-request fields.
+    entity = dict(entity, unavailable=[])
+
+    # Attach the NCBI Gene record for the resolved gene symbol. Uses the
+    # symbol UniProt gives us rather than the raw user query, so a search
+    # for a protein name still finds the right gene. NCBI being down costs
+    # only this section, and is reported rather than shown as "no gene".
+    gene_symbol = entity["genes"][0] if entity.get("genes") else query
     try:
-        entity = db_connector.resolve_entity(query)
-        if not entity:
-            raise HTTPException(status_code=404, detail=f"No entity found for '{query}'")
-
-        # Attach the NCBI Gene record for the resolved gene symbol. Uses the
-        # symbol UniProt gives us rather than the raw user query, so a search
-        # for a protein name still finds the right gene.
-        gene_symbol = entity["genes"][0] if entity.get("genes") else query
         gene_hits = db_connector.search_ncbi_gene(gene_symbol)
-        entity["genes_detail"] = [
-            {
-                "id": g["id"],
-                "name": g["name"],
-                "database": "NCBI Gene",
-                "description": g["description"],
-                "link": g["link"],
-                "provenance": g.get("provenance"),
-            }
-            for g in gene_hits[:3]
-        ]
+    except SourceUnavailable as e:
+        gene_hits = []
+        entity["unavailable"].append(e.source)
+    entity["genes_detail"] = [
+        {
+            "id": g["id"],
+            "name": g["name"],
+            "database": "NCBI Gene",
+            "description": g["description"],
+            "link": g["link"],
+            "provenance": g.get("provenance"),
+        }
+        for g in gene_hits[:3]
+    ]
 
-        return entity
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return entity
 
 
-@app.get("/alphafold/{accession}")
+@app.get("/alphafold/{accession}", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
 def get_alphafold(accession: str):
     """
     AlphaFold model for an accession, fetched separately from /entity.
@@ -439,8 +513,8 @@ def get_alphafold(accession: str):
     return model
 
 
-@app.get("/literature/{gene_symbol}")
-async def get_literature(gene_symbol: str, limit: int = 5):
+@app.get("/literature/{gene_symbol}", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
+def get_literature(gene_symbol: str, limit: int = 5):
     """
     Related PubMed papers for a gene symbol.
 
@@ -450,11 +524,8 @@ async def get_literature(gene_symbol: str, limit: int = 5):
     renders as soon as the core cross-reference is back, with literature
     filling in a beat later instead of blocking on it.
     """
-    try:
-        papers = db_connector.search_pubmed(gene_symbol, limit=limit)
-        return {"gene_symbol": gene_symbol, "papers": papers}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    papers = db_connector.search_pubmed(gene_symbol, limit=limit)
+    return {"gene_symbol": gene_symbol, "papers": papers}
 
 
 # ---- Batch lookup ----
@@ -531,7 +602,7 @@ def _batch_row(query: str, include_gene: bool) -> Dict:
     return row
 
 
-@app.post("/batch")
+@app.post("/batch", dependencies=[Depends(limit(ratelimit.BATCHES))])
 def batch_lookup(payload: BatchRequest):
     """
     Resolve many identifiers at once.
@@ -589,7 +660,7 @@ def batch_lookup(payload: BatchRequest):
 _VALID_SEQ_TYPES = {"protein", "dna"}
 
 
-@app.post("/align/needleman-wunsch")
+@app.post("/align/needleman-wunsch", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def align_needleman_wunsch(payload: AlignRequest):
     if payload.sequence_type not in _VALID_SEQ_TYPES:
         raise HTTPException(
@@ -613,7 +684,7 @@ def align_needleman_wunsch(payload: AlignRequest):
     return result
 
 
-@app.post("/align/smith-waterman")
+@app.post("/align/smith-waterman", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def align_smith_waterman(payload: AlignRequest):
     if payload.sequence_type not in _VALID_SEQ_TYPES:
         raise HTTPException(
@@ -637,7 +708,7 @@ def align_smith_waterman(payload: AlignRequest):
     return result
 
 
-@app.get("/sequence/{accession}")
+@app.get("/sequence/{accession}", dependencies=[Depends(limit(ratelimit.LOOKUPS))])
 def get_sequence(accession: str):
     """
     Fetch a single sequence by UniProt accession.
@@ -654,7 +725,7 @@ def get_sequence(accession: str):
     return seq
 
 
-@app.post("/properties")
+@app.post("/properties", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def protein_props(payload: PropertiesRequest):
     """Physicochemical properties plus the titration curve, computed locally."""
     try:
@@ -663,7 +734,7 @@ def protein_props(payload: PropertiesRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/dna")
+@app.post("/dna", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def dna_analyse(payload: DnaRequest):
     """Nucleotide analysis: composition, GC profile, six-frame translation, ORFs."""
     try:
@@ -676,7 +747,7 @@ def dna_analyse(payload: DnaRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/phylo")
+@app.post("/phylo", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def phylo_build(payload: PhyloRequest):
     """Pairwise distance matrix and a tree, from this app's own aligner."""
     try:
@@ -694,7 +765,7 @@ def phylo_build(payload: PhyloRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/restriction")
+@app.post("/restriction", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def restriction_map(payload: RestrictionRequest):
     """Restriction sites, fragments and a predicted digest."""
     try:
@@ -705,7 +776,7 @@ def restriction_map(payload: RestrictionRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/variant")
+@app.post("/variant", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def variant_analyse(payload: VariantRequest):
     """Assemble what is known about a missense substitution at one position."""
     try:
@@ -714,7 +785,7 @@ def variant_analyse(payload: VariantRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/primers")
+@app.post("/primers", dependencies=[Depends(limit(ratelimit.COMPUTE))])
 def design_primers(payload: PrimerRequest):
     """PCR primer pairs for a template, with nearest-neighbour Tm."""
     try:
@@ -752,7 +823,7 @@ def _clean_sequence(raw: str) -> str:
     return "".join(ln.strip() for ln in lines)
 
 
-@app.post("/blast/submit")
+@app.post("/blast/submit", dependencies=[Depends(limit(ratelimit.BLAST))])
 def blast_submit(payload: BlastSubmit):
     if payload.program not in _VALID_PROGRAMS:
         raise HTTPException(status_code=400, detail=f"program must be one of {sorted(_VALID_PROGRAMS)}")
@@ -920,7 +991,7 @@ def _owned_project(session: Session, project_id: str, user: models.User) -> mode
 
 
 @app.post("/projects")
-async def create_project(
+def create_project(
     payload: ProjectCreate,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -933,7 +1004,7 @@ async def create_project(
 
 
 @app.get("/projects")
-async def list_projects(
+def list_projects(
     user: models.User = Depends(auth.current_user), session: Session = Depends(db_module.get_db)
 ):
     projects = (
@@ -946,7 +1017,7 @@ async def list_projects(
 
 
 @app.get("/projects/{project_id}")
-async def get_project(
+def get_project(
     project_id: str,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -955,7 +1026,7 @@ async def get_project(
 
 
 @app.get("/projects/{project_id}/methods")
-async def project_methods(
+def project_methods(
     project_id: str,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -971,7 +1042,7 @@ async def project_methods(
 
 
 @app.delete("/projects/{project_id}")
-async def delete_project(
+def delete_project(
     project_id: str,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -989,7 +1060,7 @@ async def delete_project(
 
 
 @app.post("/projects/{project_id}/share")
-async def share_project(
+def share_project(
     project_id: str,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -1002,7 +1073,7 @@ async def share_project(
 
 
 @app.delete("/projects/{project_id}/share")
-async def unshare_project(
+def unshare_project(
     project_id: str,
     user: models.User = Depends(auth.current_user),
     session: Session = Depends(db_module.get_db),
@@ -1021,7 +1092,7 @@ def _shared_project(session: Session, token: str) -> models.Project:
 
 
 @app.get("/shared/{token}")
-async def get_shared_project(token: str, session: Session = Depends(db_module.get_db)):
+def get_shared_project(token: str, session: Session = Depends(db_module.get_db)):
     project = _shared_project(session, token)
     data = _serialize_project(project, include_items=True, for_owner=False)
     data["owner"] = project.owner.username if project.owner else None
@@ -1030,7 +1101,7 @@ async def get_shared_project(token: str, session: Session = Depends(db_module.ge
 
 
 @app.get("/shared/{token}/methods")
-async def get_shared_methods(token: str, session: Session = Depends(db_module.get_db)):
+def get_shared_methods(token: str, session: Session = Depends(db_module.get_db)):
     project = _shared_project(session, token)
     return methods_service.build(_serialize_project(project, include_items=True, for_owner=False))
 
@@ -1071,7 +1142,7 @@ def _build_saved_item(project_id: str, payload: SavedItemCreate) -> models.Saved
 
 
 @app.post("/projects/{project_id}/items")
-async def add_item(
+def add_item(
     project_id: str,
     payload: SavedItemCreate,
     user: models.User = Depends(auth.current_user),
@@ -1087,7 +1158,7 @@ async def add_item(
 
 
 @app.post("/projects/{project_id}/items/bulk")
-async def add_items_bulk(
+def add_items_bulk(
     project_id: str,
     payload: BulkSavedItemsCreate,
     user: models.User = Depends(auth.current_user),
@@ -1115,7 +1186,7 @@ async def add_items_bulk(
 
 
 @app.delete("/projects/{project_id}/items/{item_id}")
-async def remove_item(
+def remove_item(
     project_id: str,
     item_id: str,
     user: models.User = Depends(auth.current_user),
@@ -1135,7 +1206,7 @@ async def remove_item(
 
 
 @app.post("/projects/{project_id}/alignments")
-async def add_alignment(
+def add_alignment(
     project_id: str,
     payload: SavedAlignmentCreate,
     user: models.User = Depends(auth.current_user),
@@ -1171,7 +1242,7 @@ async def add_alignment(
 
 
 @app.delete("/projects/{project_id}/alignments/{alignment_id}")
-async def remove_alignment(
+def remove_alignment(
     project_id: str,
     alignment_id: str,
     user: models.User = Depends(auth.current_user),

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { SequenceTrayProvider } from './context/SequenceTray'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Chunk filenames are content-hashed, so a deploy removes the previous ones.
 // A tab opened before the deploy then fails to load the next page it visits;
@@ -26,10 +27,12 @@ window.addEventListener('vite:preloadError', (event) => {
 // landing page doesn't pay for it.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <SequenceTrayProvider>
-        <App />
-      </SequenceTrayProvider>
-    </BrowserRouter>
+    <ErrorBoundary fullPage>
+      <BrowserRouter>
+        <SequenceTrayProvider>
+          <App />
+        </SequenceTrayProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 )

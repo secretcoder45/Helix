@@ -23,7 +23,16 @@ if DATABASE_URL.startswith("postgres://"):
 # Postgres and other real DBs ignore it.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# Neon suspends an idle database and drops its connections; a pooled
+# connection from before the pause would make the next query fail. Pre-ping
+# checks each connection as it leaves the pool and replaces dead ones, and
+# recycling caps a connection's age below the server's idle timeout.
+engine_options = {} if DATABASE_URL.startswith("sqlite") else {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args, **engine_options)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

@@ -85,6 +85,8 @@ Against the live site, not localhost — expect the first request to be slow
 | `ANTHROPIC_API_KEY` | Render | no | Only used by the Assistant, which is off unless `ASSISTANT_ENABLED` is set |
 | `ALLOWED_ORIGINS` | Render | yes | Comma-separated; the Vercel URL |
 | `NCBI_API_KEY` | Render | no | Raises NCBI limit from 3/s to 10/s |
+| `SENTRY_DSN` | Render | no | Error tracking. Backend crashes, source outages and browser crashes (relayed via `/client-errors`) all report there |
+| `LOG_LEVEL` | Render | no | Default `INFO`. Logs go to Render's log view |
 | `REDIS_URL` | Render | no | Shared cache (e.g. Render Key Value). Unset: in-process cache, right for one instance |
 | `ASSISTANT_ENABLED` | Render | no | `true` turns the Assistant (`/chat`) back on. Off by default: it spends the Anthropic key per question |
 | `HELIX_DOI` | Render | no | The Zenodo DOI once minted; methods exports then cite it |
@@ -128,6 +130,10 @@ fails if a model change is committed without its migration.
 - **Cache is per-process unless `REDIS_URL` is set.** Fine for one instance;
   set it before running more than one, or each replica fetches everything
   itself.
+- **Rate limits are per-process.** Per client address: lookups 120/min,
+  computations 60/min, batch 10 per 10 min, BLAST 10/hour (`ratelimit.py`).
+  Like sign-in throttling, they move to the shared cache if the backend runs
+  as more than one instance.
 - **Sign-in throttling is per-process.** It moves to the shared cache if the
   backend ever runs as more than one instance.
 - **No password recovery or account deletion yet.** Resets go through

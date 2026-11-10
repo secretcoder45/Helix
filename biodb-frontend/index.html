@@ -7,6 +7,26 @@
     <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)" />
     <title>Helix — Unified bioinformatics workspace</title>
+    <meta
+      name="description"
+      content="Look up a gene or protein across UniProt, NCBI Gene, PDB, KEGG and AlphaFold at once, then align, build trees and design primers — with every result traceable to its source release. Free, open source."
+    />
+    <link rel="canonical" href="https://get-helix.vercel.app/" />
+
+    <!-- Link previews (Slack, email, WhatsApp, X, LinkedIn). Absolute URLs: crawlers don't resolve relative ones. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Helix" />
+    <meta property="og:url" content="https://get-helix.vercel.app/" />
+    <meta property="og:title" content="Helix — One lookup. Every database." />
+    <meta
+      property="og:description"
+      content="UniProt, NCBI Gene, PDB, KEGG and AlphaFold in one lookup — then alignment, phylogeny and primer design, with every result traceable to its source release."
+    />
+    <meta property="og:image" content="https://get-helix.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Helix: One lookup. Every database. Above a strip of human preproinsulin's 110 residues, coloured by chemistry." />
+    <meta name="twitter:card" content="summary_large_image" />
 
     <!--
       Inter for interface, Source Serif 4 for display type, JetBrains Mono for
@@ -21,15 +41,12 @@
       rel="stylesheet"
     />
 
-    <script>
-      // Apply the stored theme before first paint so there's no flash of the
-      // wrong background on load.
-      try {
-        var t = localStorage.getItem('helix-theme')
-        var dark = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
-        if (dark) document.documentElement.classList.add('dark')
-      } catch (e) {}
-    </script>
+    <!--
+      Applies the stored theme before first paint, so there's no flash of the
+      wrong background. A file rather than an inline script so the Content
+      Security Policy can forbid inline scripts entirely (see vercel.json).
+    -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AlertCircle } from 'lucide-react'
 import { useDatabases } from '../lib/api'
@@ -9,6 +9,7 @@ import { AppShell } from './AppShell'
 import { CommandPalette } from '../components/CommandPalette'
 import { LogoMark } from '../components/Logo'
 import { AuthProvider } from '../context/Auth'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 
 /**
  * The application proper — everything behind the landing page.
@@ -41,6 +42,7 @@ const SearchPage = page(() => import('../pages/SearchPage'), 'SearchPage')
 const ValidationPage = page(() => import('../pages/ValidationPage'), 'ValidationPage')
 const SignInPage = page(() => import('../pages/SignInPage'), 'SignInPage')
 const SharedProjectPage = page(() => import('../pages/SharedProjectPage'), 'SharedProjectPage')
+const NotFoundPage = page(() => import('../pages/NotFoundPage'), 'NotFoundPage')
 
 // Created at module scope so it survives re-renders; it lives here rather
 // than in main.jsx so the landing page doesn't ship react-query.
@@ -115,6 +117,7 @@ function WorkspaceInner() {
     }
   })
   const navigate = useNavigate()
+  const location = useLocation()
 
   const setRail = (value) => {
     const next = typeof value === 'function' ? value(collapsed) : value
@@ -154,26 +157,31 @@ function WorkspaceInner() {
       setCollapsed={setRail}
       onOpenPalette={() => setPaletteOpen(true)}
     >
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route path="lookup" element={<EntityPage />} />
-          <Route path="batch" element={<BatchPage />} />
-          <Route path="blast" element={<BlastPage />} />
-          <Route path="align" element={<AlignPage />} />
-          <Route path="properties" element={<PropertiesPage />} />
-          <Route path="dna" element={<DnaPage />} />
-          <Route path="compare" element={<ComparePage />} />
-          <Route path="phylo" element={<PhyloPage />} />
-          <Route path="restriction" element={<RestrictionPage />} />
-          <Route path="variant" element={<VariantPage />} />
-          <Route path="primers" element={<PrimerPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="validation" element={<ValidationPage />} />
-          <Route path="shared/:token" element={<SharedProjectPage />} />
-          <Route path="db/:database" element={<SearchPage databases={databases} />} />
-          <Route path="*" element={<Navigate to="/lookup" replace />} />
-        </Routes>
-      </Suspense>
+      {/* Keyed by path: a crash is contained to one page and cleared by navigating away. */}
+      <ErrorBoundary key={location.pathname}>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="lookup" element={<EntityPage />} />
+            <Route path="batch" element={<BatchPage />} />
+            <Route path="blast" element={<BlastPage />} />
+            <Route path="align" element={<AlignPage />} />
+            <Route path="properties" element={<PropertiesPage />} />
+            <Route path="dna" element={<DnaPage />} />
+            <Route path="compare" element={<ComparePage />} />
+            <Route path="phylo" element={<PhyloPage />} />
+            <Route path="restriction" element={<RestrictionPage />} />
+            <Route path="variant" element={<VariantPage />} />
+            <Route path="primers" element={<PrimerPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="validation" element={<ValidationPage />} />
+            <Route path="shared/:token" element={<SharedProjectPage />} />
+            <Route path="db/:database" element={<SearchPage databases={databases} />} />
+            {/* The Assistant is hidden for now; old links land on the lookup. */}
+            <Route path="chat" element={<Navigate to="/lookup" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </AppShell>
   )
 

@@ -170,6 +170,33 @@ const GROUPS = [
     ],
   },
   {
+    tool: 'Reliability',
+    file: 'test_resilience.py',
+    checks: [
+      {
+        claim: 'When a source database is down, Helix says which one — it never shows the outage as “no results”. Failures aren’t cached, so recovery is immediate.',
+        against: 'invariant',
+        tests: [
+          'test_server_errors_raise_rather_than_returning_nothing',
+          'test_lookup_reports_the_source_that_is_down',
+          'test_search_returns_what_answered_and_names_what_did_not',
+          'test_failures_are_not_cached',
+        ],
+      },
+      {
+        claim: 'One slow lookup doesn’t hold up anyone else’s requests.',
+        against: 'invariant',
+        file: 'test_concurrency.py',
+        tests: ['test_a_slow_lookup_does_not_block_other_requests', 'test_no_route_is_async'],
+      },
+      {
+        claim: 'Expensive endpoints are limited per client, so one script can’t use up the shared server or get it blocked by NCBI.',
+        against: 'invariant',
+        tests: ['test_compute_endpoints_are_rate_limited_per_client', 'test_batch_has_its_own_tighter_budget'],
+      },
+    ],
+  },
+  {
     tool: 'Accounts & sharing',
     file: 'test_auth.py',
     checks: [

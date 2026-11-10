@@ -36,9 +36,6 @@ import hmac
 import os
 import re
 import secrets
-import threading
-import time
-from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -47,6 +44,8 @@ from sqlalchemy.orm import Session
 
 import db as db_module
 import models
+from ratelimit import Throttle, client_address  # noqa: F401 (client_address re-exported)
+from ratelimit import too_many as _too_many
 
 # ---- Passwords ----
 
@@ -211,60 +210,11 @@ def current_user(request: Request, session: Session = Depends(db_module.get_db))
 
 
 # ---- Throttling ----
+# The limiter itself lives in ratelimit.py, shared with endpoint limits.
 
-class _Throttle:
-    """At most `limit` events per key in a sliding window of `window` seconds."""
-
-    def __init__(self, limit: int, window: float):
-        self.limit, self.window = limit, window
-        self._events = {}
-        self._lock = threading.Lock()
-
-    def _recent(self, key: str) -> deque:
-        q = self._events.setdefault(key, deque())
-        cutoff = time.monotonic() - self.window
-        while q and q[0] < cutoff:
-            q.popleft()
-        return q
-
-    def blocked(self, key: str) -> Optional[int]:
-        """Seconds until `key` may try again, or None if it may now."""
-        with self._lock:
-            q = self._recent(key)
-            if len(q) < self.limit:
-                return None
-            return max(1, int(q[0] + self.window - time.monotonic()))
-
-    def hit(self, key: str) -> None:
-        with self._lock:
-            self._recent(key).append(time.monotonic())
-
-    def clear(self, key: Optional[str] = None) -> None:
-        with self._lock:
-            if key is None:
-                self._events.clear()
-            else:
-                self._events.pop(key, None)
+LOGIN_FAILURES = Throttle(limit=5, window=15 * 60)
+SIGNUPS = Throttle(limit=10, window=60 * 60)
 
 
-LOGIN_FAILURES = _Throttle(limit=5, window=15 * 60)
-SIGNUPS = _Throttle(limit=10, window=60 * 60)
-
-
-def client_address(request: Request) -> str:
-    # Behind Render's proxy the socket address is the proxy's. The right-most
-    # X-Forwarded-For entry is the one the proxy itself appended, so unlike
-    # the left-most it can't be chosen by the client.
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    if forwarded:
-        return forwarded.split(",")[-1].strip()
-    return request.client.host if request.client else "unknown"
-
-
-def too_many(seconds: int) -> HTTPException:
-    minutes = max(1, round(seconds / 60))
-    return HTTPException(
-        status_code=429,
-        detail=f"Too many attempts. Try again in {minutes} minute{'s' if minutes != 1 else ''}.",
-        headers={"Retry-After": str(seconds)},
-    )
+def too_many(seconds: int):
+    return _too_many(seconds, what="attempts")

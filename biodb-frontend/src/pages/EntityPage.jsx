@@ -16,7 +16,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react'
-import { useEntity, useLiterature, useAlphafold } from '../lib/api'
+import { errorMessage, useEntity, useLiterature, useAlphafold } from '../lib/api'
 import { useDebounce } from '../hooks/useDebounce'
 import { SaveToProject } from '../components/SaveToProject'
 import { ProvenanceLine } from '../components/Provenance'
@@ -32,6 +32,7 @@ import {
   EmptyState,
   Skeleton,
   SourceBadge,
+  SourceNotice,
   Scroller,
 } from '../components/ui'
 
@@ -132,7 +133,7 @@ function SequenceCard({ entity }) {
 }
 
 function LiteratureCard({ geneSymbol }) {
-  const { data: papers, isLoading } = useLiterature(geneSymbol)
+  const { data: papers, isLoading, isError } = useLiterature(geneSymbol)
 
   if (!geneSymbol) return null
 
@@ -143,6 +144,11 @@ function LiteratureCard({ geneSymbol }) {
         <div className="space-y-2 p-4">
           <Skeleton className="h-10" />
           <Skeleton className="h-10" />
+        </div>
+      )}
+      {isError && (
+        <div className="p-3">
+          <SourceNotice source="PubMed" what="related papers are" />
         </div>
       )}
       {!isLoading && papers?.length === 0 && (
@@ -173,7 +179,7 @@ function LiteratureCard({ geneSymbol }) {
 }
 
 function AlphafoldCard({ accession, hasExperimental }) {
-  const { data: model, isLoading, isError } = useAlphafold(accession)
+  const { data: model, isLoading, isError, error } = useAlphafold(accession)
 
   if (isLoading)
     return (
@@ -184,7 +190,16 @@ function AlphafoldCard({ accession, hasExperimental }) {
         </div>
       </Card>
     )
-  if (isError || !model) return null
+  if (isError && error?.response?.status !== 404)
+    return (
+      <Card>
+        <CardHeader title="Predicted structure" icon={Sparkles} />
+        <div className="p-3">
+          <SourceNotice source="AlphaFold DB" what="the predicted model is" />
+        </div>
+      </Card>
+    )
+  if (isError || !model) return null // 404: no model exists for this protein
 
   return (
     <Card>
@@ -332,12 +347,18 @@ export function EntityPage() {
                   <p className="text-[13px] font-semibold text-ink">
                     {error?.response?.status === 404
                       ? `No entry found for “${debounced}”`
-                      : 'Could not reach the database'}
+                      : error?.response?.status === 503
+                        ? `${error.response.data?.source || 'A source database'} isn’t responding`
+                        : error?.response?.status === 429
+                          ? 'Slow down a moment'
+                          : 'Something went wrong'}
                   </p>
                   <p className="mt-0.5 text-[12px] text-ink-2">
                     {error?.response?.status === 404
                       ? 'Try an official gene symbol such as BRCA1, or a full protein name.'
-                      : 'The source APIs may be slow or temporarily unavailable. Try again shortly.'}
+                      : error?.response?.status === 503
+                        ? 'This is a problem at the source, not a missing entry — the lookup will work once it recovers. Try again in a minute.'
+                        : errorMessage(error)}
                   </p>
                 </div>
               </div>
@@ -434,6 +455,14 @@ export function EntityPage() {
                 </div>
 
                 <div className="space-y-4">
+                  {entity.unavailable?.includes('NCBI Gene') && (
+                    <Card>
+                      <CardHeader title="Gene" icon={Dna} />
+                      <div className="p-3">
+                        <SourceNotice source="NCBI Gene" what="the gene record is" />
+                      </div>
+                    </Card>
+                  )}
                   {entity.genes_detail?.length > 0 && (
                     <Card>
                       <CardHeader title="Gene" icon={Dna} />

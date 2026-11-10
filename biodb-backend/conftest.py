@@ -16,6 +16,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import auth  # noqa: E402
+import ratelimit  # noqa: E402
 import main  # noqa: E402
 
 TEST_PASSWORD = "a long test passphrase"
@@ -31,10 +32,9 @@ def register(client, username=None, password=TEST_PASSWORD):
 
 @pytest.fixture(autouse=True)
 def _reset_throttles():
-    # Throttles are process-wide; one test's failed sign-ins must not lock
-    # out the next test's user.
-    auth.LOGIN_FAILURES.clear()
-    auth.SIGNUPS.clear()
+    # Limiters are process-wide; one test's requests or failed sign-ins must
+    # not lock out the next test.
+    ratelimit.clear_all()
     yield
 
 
@@ -51,7 +51,7 @@ def anon_client():
 def client():
     """Signed in as a fresh user for the module — projects need an owner."""
     with TestClient(main.app) as c:
-        auth.SIGNUPS.clear()
+        ratelimit.clear_all()
         _, token = register(c)
         c.headers.update({"Authorization": f"Bearer {token}"})
         yield c

@@ -175,6 +175,29 @@ export function EmptyState({ icon: Icon, title, description, action }) {
   )
 }
 
+/* ---------------------------------------------------------- SourceNotice -- */
+
+/**
+ * A source database didn't answer. Said in place of the missing section, so
+ * its absence can't be read as "there is nothing here".
+ */
+export function SourceNotice({ source, what, className }) {
+  return (
+    <p
+      className={clsx(
+        'm-0 flex items-start gap-2 rounded-lg bg-warn-soft px-3 py-2 text-[12px] leading-relaxed text-ink-2',
+        className,
+      )}
+    >
+      <span className="mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full bg-warn" aria-hidden="true" />
+      <span>
+        <span className="font-medium text-ink">{source} isn’t responding right now</span>
+        {what ? ` — ${what} missing.` : '.'} Try again in a minute.
+      </span>
+    </p>
+  )
+}
+
 /* ---------------------------------------------------------------- Layout -- */
 
 export function PageHeader({ eyebrow, title, description, actions }) {

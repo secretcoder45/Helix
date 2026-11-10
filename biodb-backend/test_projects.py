@@ -433,8 +433,8 @@ def test_databases_lists_only_searchable_categories(anon_client, monkeypatch):
     for fn in ("search_ncbi_gene", "search_uniprot_protein", "search_pdb_protein", "search_kegg_pathway"):
         monkeypatch.setattr(main.db_connector, fn, lambda q, fake=fake: fake)
     for key, meta in listed.items():
-        rows = main._run_search(key, "insulin")
-        assert rows, key
+        rows, unavailable = main._run_search(key, "insulin")
+        assert rows and not unavailable, key
         sources = {"UniProt" if r["database"] == "UniProt" else r["database"] for r in rows}
         named = {"PDB" if a == "RCSB PDB" else a for a in meta["apis"]}
         assert sources <= named, (key, sources, named)

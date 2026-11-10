@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import time
@@ -7,6 +8,48 @@ from typing import List, Dict
 
 from cache import cached
 import provenance as prov
+
+
+log = logging.getLogger("helix.sources")
+
+
+class SourceUnavailable(Exception):
+    """
+    A source database failed to answer — down, overloaded, rate-limiting us,
+    or returning something we couldn't parse.
+
+    Deliberately distinct from an empty result. These functions used to catch
+    every error and return [], so "NCBI is down" reached the researcher as
+    "no results for your gene" — a wrong answer that looks like a right one.
+    Raised, it propagates (and is never cached), and the API reports it as a
+    503 naming the source.
+    """
+
+    def __init__(self, source: str):
+        self.source = source
+        super().__init__(f"{source} isn't responding right now. Try again in a minute.")
+
+
+def _ok(response, source: str) -> bool:
+    """
+    True for a 200. A 4xx is the source saying "no such record" (UniProt
+    answers 400 for an unknown accession), so False. Server errors and rate
+    limiting mean the source couldn't answer at all.
+    """
+    if response.status_code == 429 or response.status_code >= 500:
+        log.warning("%s returned HTTP %s for %s", source, response.status_code, response.url)
+        raise SourceUnavailable(source)
+    return response.status_code == 200
+
+
+def _failed(source: str, error: Exception) -> SourceUnavailable:
+    if isinstance(error, SourceUnavailable):
+        return error
+    if isinstance(error, requests.RequestException):
+        log.warning("%s request failed: %s", source, error)
+    else:  # a response we couldn't parse: possibly our bug, so keep the traceback
+        log.exception("%s returned something unexpected", source)
+    return SourceUnavailable(source)
 
 
 def _now_iso() -> str:
@@ -106,7 +149,9 @@ class DatabaseConnector:
                 r = requests.get(f"{DatabaseConnector.BASE_URLS['kegg']}/info/pathway", timeout=8)
                 return prov.kegg_release(r.text) if r.status_code == 200 else {}
         except Exception as e:
-            print(f"Release lookup error ({name}): {e}")
+            # Metadata, not the result itself: a lookup shouldn't fail because
+            # the release couldn't be read. The record simply has no release.
+            log.warning("Release lookup failed for %s: %s", name, e)
         # RCSB PDB updates weekly with no release identifier in its APIs;
         # the retrieval date is the honest record there.
         return {}
@@ -132,7 +177,7 @@ class DatabaseConnector:
 
             _NCBI_LIMITER.acquire()
             response = requests.get(url, params=params, timeout=8)
-            if response.status_code != 200:
+            if not _ok(response, "NCBI Gene"):
                 return []
 
             data = response.json()
@@ -152,7 +197,7 @@ class DatabaseConnector:
 
             _NCBI_LIMITER.acquire()
             summary_response = requests.get(summary_url, params=summary_params, timeout=8)
-            if summary_response.status_code != 200:
+            if not _ok(summary_response, "NCBI Gene"):
                 return []
 
             summary_data = summary_response.json()
@@ -180,8 +225,7 @@ class DatabaseConnector:
             return results
 
         except Exception as e:
-            print(f"NCBI search error: {e}")
-            return []
+            raise _failed("NCBI Gene", e) from e
 
     @staticmethod
     @cached("uniprot")
@@ -196,7 +240,7 @@ class DatabaseConnector:
             }
 
             response = requests.get(url, params=params, timeout=8)
-            if response.status_code != 200:
+            if not _ok(response, "UniProt"):
                 return []
 
             data = response.json()
@@ -226,8 +270,7 @@ class DatabaseConnector:
             return results
 
         except Exception as e:
-            print(f"UniProt search error: {e}")
-            return []
+            raise _failed("UniProt", e) from e
 
     @staticmethod
     @cached("pdb")
@@ -250,7 +293,7 @@ class DatabaseConnector:
             }
 
             response = requests.post(url, json=query_json, timeout=8)
-            if response.status_code != 200:
+            if not _ok(response, "RCSB PDB"):
                 return []
 
             data = response.json()
@@ -275,8 +318,7 @@ class DatabaseConnector:
             return results
 
         except Exception as e:
-            print(f"PDB search error: {e}")
-            return []
+            raise _failed("RCSB PDB", e) from e
 
     @staticmethod
     @cached("kegg")
@@ -286,7 +328,7 @@ class DatabaseConnector:
             url = f"https://rest.kegg.jp/find/pathway/{pathway_name}"
             response = requests.get(url, timeout=8)
 
-            if response.status_code != 200 or not response.text.strip():
+            if not _ok(response, "KEGG") or not response.text.strip():
                 return []
 
             release = DatabaseConnector.source_release("KEGG")
@@ -311,8 +353,7 @@ class DatabaseConnector:
                     )
             return results
         except Exception as e:
-            print(f"KEGG search error: {e}")
-            return []
+            raise _failed("KEGG", e) from e
 
     @staticmethod
     @cached("pubmed")
@@ -340,7 +381,7 @@ class DatabaseConnector:
 
             _NCBI_LIMITER.acquire()
             search_response = requests.get(search_url, params=search_params, timeout=10)
-            if search_response.status_code != 200:
+            if not _ok(search_response, "PubMed"):
                 return []
 
             pmids = search_response.json().get("esearchresult", {}).get("idlist", [])
@@ -354,7 +395,7 @@ class DatabaseConnector:
 
             _NCBI_LIMITER.acquire()
             summary_response = requests.get(summary_url, params=summary_params, timeout=10)
-            if summary_response.status_code != 200:
+            if not _ok(summary_response, "PubMed"):
                 return []
 
             result = summary_response.json().get("result", {})
@@ -395,8 +436,7 @@ class DatabaseConnector:
             return papers
 
         except Exception as e:
-            print(f"PubMed search error: {e}")
-            return []
+            raise _failed("PubMed", e) from e
 
     @staticmethod
     @cached("variants")
@@ -415,7 +455,7 @@ class DatabaseConnector:
                 params={"fields": "ft_variant"},
                 timeout=12,
             )
-            if r.status_code != 200:
+            if not _ok(r, "UniProt"):
                 return []
 
             out = []
@@ -445,8 +485,7 @@ class DatabaseConnector:
                 )
             return out
         except Exception as e:
-            print(f"Variant fetch error: {e}")
-            return []
+            raise _failed("UniProt", e) from e
 
     @staticmethod
     @cached("alphafold")
@@ -468,7 +507,7 @@ class DatabaseConnector:
             r = requests.get(
                 f"https://alphafold.ebi.ac.uk/api/prediction/{accession}", timeout=12
             )
-            if r.status_code != 200:
+            if not _ok(r, "AlphaFold DB"):
                 return {}
             data = r.json()
             if not data:
@@ -516,8 +555,7 @@ class DatabaseConnector:
                 ),
             }
         except Exception as e:
-            print(f"AlphaFold fetch error: {e}")
-            return {}
+            raise _failed("AlphaFold DB", e) from e
 
     @staticmethod
     @cached("sequence")
@@ -541,7 +579,7 @@ class DatabaseConnector:
             # UniProt answers 400 (not 404) for an accession that doesn't
             # exist, so treat any non-200 as "not found" rather than checking
             # for a specific status.
-            if response.status_code != 200:
+            if not _ok(response, "UniProt"):
                 return {}
 
             entry = response.json()
@@ -566,8 +604,7 @@ class DatabaseConnector:
                 ),
             }
         except Exception as e:
-            print(f"Sequence fetch error: {e}")
-            return {}
+            raise _failed("UniProt", e) from e
 
     @staticmethod
     @cached("entity")
@@ -652,7 +689,7 @@ class DatabaseConnector:
                     },
                     timeout=15,
                 )
-                if response.status_code != 200:
+                if not _ok(response, "UniProt"):
                     continue
                 results = response.json().get("results", [])
                 if results:
@@ -766,8 +803,7 @@ class DatabaseConnector:
             }
 
         except Exception as e:
-            print(f"Entity resolution error: {e}")
-            return {}
+            raise _failed("UniProt", e) from e
 
 
 # Singleton instance
