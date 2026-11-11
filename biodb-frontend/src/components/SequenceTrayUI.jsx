@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Layers, Check, X, GitCompareArrows, Loader2, Plus } from 'lucide-react'
 import { useSequenceTray } from '../context/SequenceTray'
-import { API_URL } from '../lib/api'
+import { API_BASE } from '../lib/api'
 import axios from 'axios'
 
 /**
@@ -34,7 +34,7 @@ export function AddToTrayButton({ entry, accession, size = 'sm', className = '' 
 
     setLoading(true)
     try {
-      const { data } = await axios.get(`${API_URL}/sequence/${encodeURIComponent(accession)}`)
+      const { data } = await axios.get(`${API_BASE}/sequence/${encodeURIComponent(accession)}`)
       add({
         id: data.accession,
         label: data.name || data.accession,

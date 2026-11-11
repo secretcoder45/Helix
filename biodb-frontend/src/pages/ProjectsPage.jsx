@@ -119,6 +119,8 @@ function AlignmentRows({ projectId, alignments }) {
             </div>
             <button
               onClick={() => removeAlignment.mutate({ projectId, alignmentId: a.id })}
+              aria-label={`Remove alignment ${a.label1} vs ${a.label2}`}
+              title="Remove from project"
               className="shrink-0 rounded-md p-1.5 text-ink-3 opacity-0 transition-all hover:bg-danger-soft hover:text-danger group-hover:opacity-100 focus:opacity-100"
             >
               <Trash2 size={13} />
@@ -279,6 +281,8 @@ function ProjectItems({ projectId }) {
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    aria-label={`Open ${item.external_id} in ${item.database}`}
+                    title={`Open in ${item.database}`}
                     className="rounded-md p-1.5 text-ink-3 transition-colors hover:bg-surface-3 hover:text-accent"
                   >
                     <ExternalLink size={13} />
@@ -286,6 +290,8 @@ function ProjectItems({ projectId }) {
                 )}
                 <button
                   onClick={() => removeItem.mutate({ projectId, itemId: item.id })}
+                  aria-label={`Remove ${item.name} from project`}
+                  title="Remove from project"
                   className="rounded-md p-1.5 text-ink-3 transition-colors hover:bg-danger-soft hover:text-danger"
                 >
                   <Trash2 size={13} />
@@ -421,6 +427,8 @@ export function ProjectsPage() {
                         </button>
                         <button
                           onClick={() => deleteProject.mutate(p.id)}
+                          aria-label={`Delete project ${p.name}`}
+                          title="Delete project"
                           className="rounded-md p-1.5 text-ink-3 opacity-0 transition-all hover:bg-danger-soft hover:text-danger group-hover:opacity-100 focus:opacity-100"
                         >
                           <Trash2 size={13} />

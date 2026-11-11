@@ -1,5 +1,5 @@
 import { Component } from 'react'
-import { API_URL } from '../lib/config'
+import { API_BASE } from '../lib/config'
 
 /**
  * Contains a rendering crash to the part of the page that crashed.
@@ -16,7 +16,7 @@ import { API_URL } from '../lib/config'
 
 function report(error, info) {
   try {
-    fetch(`${API_URL}/client-errors`, {
+    fetch(`${API_BASE}/client-errors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

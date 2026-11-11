@@ -1,12 +1,12 @@
 import axios from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { API_URL } from './config'
+import { API_BASE, API_URL } from './config'
 import { SIGNED_OUT_EVENT, clearToken, getToken } from './session'
 
-export { API_URL }
+export { API_BASE, API_URL }
 
-const client = axios.create({ baseURL: API_URL })
+const client = axios.create({ baseURL: API_BASE })
 
 // Read the token per request rather than once, so signing in or out takes
 // effect immediately for every hook.
@@ -320,6 +320,40 @@ export function useChangePassword() {
   return useMutation({
     mutationFn: async (payload) => {
       const { data } = await client.post('/auth/password', payload)
+      return data
+    },
+  })
+}
+
+/**
+ * Download everything the account holds as one JSON file. The server names
+ * the file (helix-<username>-<date>.json); the fallback is for an older one.
+ */
+export function useExportAccount() {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await client.get('/auth/export', { responseType: 'blob' })
+      const named = /filename="([^"]+)"/.exec(res.headers['content-disposition'] || '')
+      const filename = named?.[1] || `helix-export-${new Date().toISOString().slice(0, 10)}.json`
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Revoked on the next tick: some browsers start the download asynchronously.
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+      return { filename }
+    },
+  })
+}
+
+/** Delete the account and everything in it. Needs the password. */
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async (password) => {
+      const { data } = await client.delete('/auth/account', { data: { password } })
       return data
     },
   })

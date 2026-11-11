@@ -184,6 +184,27 @@ const GROUPS = [
         ],
       },
       {
+        claim: 'A passing hiccup at a source — a dropped connection, a 502, a brief 429 — is retried twice with backoff before anything is reported. A slow source and a “no such entry” are not retried, and NCBI retries still respect its rate limit.',
+        against: 'invariant',
+        file: 'test_retries.py',
+        tests: [
+          'test_one_hiccup_is_retried_and_the_lookup_succeeds',
+          'test_a_source_that_stays_down_is_reported_after_three_tries',
+          'test_a_slow_source_is_not_asked_again',
+          'test_an_answer_is_never_retried',
+          'test_ncbi_retries_wait_their_turn_at_the_rate_limiter',
+        ],
+      },
+      {
+        claim: 'The API is versioned under /v1, and every older unversioned address still works, marked as deprecated.',
+        against: 'invariant',
+        file: 'test_api_versions.py',
+        tests: [
+          'test_every_route_is_served_under_v1_and_at_its_old_path',
+          'test_an_unversioned_path_still_works_and_names_its_replacement',
+        ],
+      },
+      {
         claim: 'One slow lookup doesn’t hold up anyone else’s requests.',
         against: 'invariant',
         file: 'test_concurrency.py',
@@ -222,6 +243,17 @@ const GROUPS = [
         claim: 'A share link gives read-only access and nothing else; stopping sharing breaks it immediately.',
         against: 'invariant',
         tests: ['test_share_link_is_read_only_and_revocable'],
+      },
+      {
+        claim: 'You can download everything an account holds as one JSON file, and deleting the account removes all of it — projects, records, alignments, share links, sessions — and nothing belonging to anyone else.',
+        against: 'invariant',
+        file: 'test_account_data.py',
+        tests: [
+          'test_export_holds_everything_the_account_saved',
+          'test_export_leaves_out_credentials',
+          'test_deleting_removes_the_account_and_everything_in_it',
+          'test_deleting_leaves_other_accounts_alone',
+        ],
       },
     ],
   },

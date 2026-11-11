@@ -77,14 +77,22 @@ migrations on startup. Tests:
 cd biodb-backend
 python -m pytest -m "not network"    # offline suite, as run on every push
 python -m pytest -m network          # checks against the live databases
+
+cd ../biodb-frontend
+npm run test:e2e                     # the interface in a real browser
 ```
+
+The API is versioned: every path is under `/v1` (for example
+`GET /v1/entity/BRCA1`), documented at `/docs`. The older unversioned paths
+still answer, with a `Deprecation` header naming the `/v1` replacement.
 
 ## Layout
 
 ```
-biodb-backend/    FastAPI app: database clients, alignment and analysis
-                  services, accounts, projects, provenance, migrations
-biodb-frontend/   React + Vite workspace and landing page
+biodb-backend/    FastAPI app. main.py sets it up; routers/ holds the routes
+                  (one module per area); database clients, analysis services,
+                  accounts, projects, provenance, migrations alongside
+biodb-frontend/   React + Vite workspace and landing page; e2e/ browser tests
 DEPLOY.md         How the hosted version is deployed and configured
 ```
 

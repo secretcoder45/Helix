@@ -1,0 +1,2708 @@
+{
+ "fetch_alphafold": {
+  "P01308": {
+   "accession": "P01308",
+   "cif_url": "https://alphafold.ebi.ac.uk/files/AF-P01308-F1-model_v6.cif",
+   "entry_id": "AF-P01308-F1",
+   "mean_plddt": 52.9,
+   "pae_url": "https://alphafold.ebi.ac.uk/files/AF-P01308-F1-predicted_aligned_error_v6.png",
+   "pdb_url": "https://alphafold.ebi.ac.uk/files/AF-P01308-F1-model_v6.pdb",
+   "plddt": [
+    64.44,
+    77.88,
+    76.25,
+    83.88,
+    82.19,
+    83.19,
+    84.75,
+    84.0,
+    85.56,
+    85.44,
+    82.06,
+    82.25,
+    82.38,
+    78.06,
+    74.19,
+    68.94,
+    66.44,
+    63.94,
+    53.19,
+    49.03,
+    50.72,
+    45.88,
+    48.22,
+    40.69,
+    41.34,
+    46.03,
+    39.75,
+    46.88,
+    45.88,
+    48.81,
+    49.47,
+    51.88,
+    49.78,
+    50.19,
+    52.31,
+    52.56,
+    52.28,
+    52.34,
+    51.78,
+    47.75,
+    52.53,
+    53.56,
+    56.16,
+    53.34,
+    53.88,
+    49.94,
+    45.03,
+    44.81,
+    41.19,
+    42.19,
+    47.44,
+    47.25,
+    41.88,
+    39.38,
+    44.19,
+    47.41,
+    40.56,
+    47.5,
+    41.78,
+    43.12,
+    48.38,
+    45.94,
+    42.59,
+    42.53,
+    46.12,
+    45.47,
+    41.56,
+    52.94,
+    43.75,
+    49.06,
+    48.09,
+    42.88,
+    44.72,
+    43.22,
+    38.22,
+    45.41,
+    48.06,
+    44.47,
+    37.66,
+    41.38,
+    43.94,
+    46.59,
+    51.69,
+    47.41,
+    47.81,
+    51.66,
+    53.59,
+    51.19,
+    51.0,
+    48.0,
+    51.41,
+    50.16,
+    52.03,
+    49.19,
+    54.75,
+    52.19,
+    56.25,
+    47.12,
+    51.47,
+    51.84,
+    52.94,
+    50.25,
+    50.0,
+    51.22,
+    54.72,
+    54.12,
+    55.84,
+    47.41,
+    51.44,
+    43.81
+   ],
+   "provenance": {
+    "captured": "retrieval",
+    "checksum": null,
+    "database": "AlphaFold DB",
+    "helix": {
+     "commit": "300da27",
+     "name": "Helix",
+     "version": "0.1.1"
+    },
+    "record": "AF-P01308-F1",
+    "record_version": "6",
+    "release": null,
+    "release_date": "2025-08-01",
+    "retrieved_at": "2026-11-11T20:40:01.486426+00:00",
+    "sequence_version": null
+   },
+   "retrieved_at": "2026-11-11T20:40:01.486426+00:00",
+   "version": 6,
+   "viewer_url": "https://alphafold.ebi.ac.uk/entry/P01308"
+  }
+ },
+ "fetch_sequence": {
+  "P01308": {
+   "accession": "P01308",
+   "length": 110,
+   "name": "INS_HUMAN",
+   "organism": "Homo sapiens",
+   "protein_name": "Insulin",
+   "provenance": {
+    "captured": "retrieval",
+    "checksum": "CRC64:C2C3B23B85E520E5",
+    "database": "UniProtKB",
+    "helix": {
+     "commit": "300da27",
+     "name": "Helix",
+     "version": "0.1.1"
+    },
+    "record": "P01308",
+    "record_version": "285",
+    "release": "2026_04",
+    "release_date": "2026-11-04",
+    "retrieved_at": "2026-11-11T20:40:02.689807+00:00",
+    "sequence_version": "1"
+   },
+   "retrieved_at": "2026-11-11T20:40:02.689807+00:00",
+   "sequence": "MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN"
+  }
+ },
+ "resolve_entity": {
+  "INS": {
+   "accession": "P01308",
+   "features": [
+    {
+     "description": "",
+     "end": 24,
+     "group": "topology",
+     "start": 1,
+     "type": "Signal"
+    },
+    {
+     "description": "Insulin B chain",
+     "end": 54,
+     "group": "topology",
+     "start": 25,
+     "type": "Peptide"
+    },
+    {
+     "description": "Interchain (between B and A chains)",
+     "end": 96,
+     "group": "modification",
+     "start": 31,
+     "type": "Disulfide bond"
+    },
+    {
+     "description": "Interchain (between B and A chains)",
+     "end": 109,
+     "group": "modification",
+     "start": 43,
+     "type": "Disulfide bond"
+    },
+    {
+     "description": "Insulin A chain",
+     "end": 110,
+     "group": "topology",
+     "start": 90,
+     "type": "Peptide"
+    },
+    {
+     "description": "",
+     "end": 100,
+     "group": "modification",
+     "start": 95,
+     "type": "Disulfide bond"
+    }
+   ],
+   "function": "Hormone secreted by pancreatic islet beta cells, that is the principal anabolic regulator of glucose, lipid, and protein metabolism and the central controller of blood glucose homeostasis (PubMed:32291281). Acts by binding to and activating the insulin receptor INSR, a receptor tyrosine kinase, triggering INSR autophosphorylation and recruitment/phosphorylation of insulin receptor substrate proteins IRS1 and IRS2, which activate the downstream PI3K/AKT and RAS/MAPK signaling cascades (PubMed:7983060). Through the PI3K/AKT pathway, stimulates glucose uptake into skeletal muscle and adipose tissue by promoting translocation of the glucose transporter GLUT4/SLC2A4 from intracellular storage vesicles to the plasma membrane (PubMed:9235985). In liver and muscle, promotes glycogen synthesis through AKT-mediated inhibitory phosphorylation of glycogen synthase kinase-3 (GSK3), thereby activating glycogen synthase (PubMed:7763247). In the liver, suppresses hepatic glucose production by inhibiting gluconeogenesis, in part through phosphorylation and exclusion of the FOXO1 transcription factor, which downregulates the gluconeogenic enzymes PEPCK and glucose-6-phosphatase (PubMed:12754525). In adipose tissue, promotes lipogenesis and potently suppresses lipolysis, reducing the flux of free fatty acids and glycerol to the liver and thereby further restraining hepatic gluconeogenesis (PubMed:15113941)",
+   "genes": [
+    "INS"
+   ],
+   "links": {
+    "uniprot": "https://www.uniprot.org/uniprotkb/P01308"
+   },
+   "name": "INS_HUMAN",
+   "organism": "Homo sapiens",
+   "pathways": [
+    {
+     "database": "KEGG",
+     "id": "hsa:3630",
+     "link": "https://www.kegg.jp/entry/hsa:3630"
+    }
+   ],
+   "protein_name": "Insulin",
+   "provenance": {
+    "captured": "retrieval",
+    "checksum": "CRC64:C2C3B23B85E520E5",
+    "database": "UniProtKB",
+    "helix": {
+     "commit": "300da27",
+     "name": "Helix",
+     "version": "0.1.1"
+    },
+    "record": "P01308",
+    "record_version": "285",
+    "release": "2026_04",
+    "release_date": "2026-11-04",
+    "retrieved_at": "2026-11-11T20:39:42.383674+00:00",
+    "sequence_version": "1"
+   },
+   "query": "INS",
+   "retrieved_at": "2026-11-11T20:39:42.383674+00:00",
+   "sequence": {
+    "length": 110,
+    "molecular_weight": 11981,
+    "value": "MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN"
+   },
+   "structures": [
+    {
+     "database": "PDB",
+     "id": "1A7F",
+     "link": "https://www.rcsb.org/structure/1A7F"
+    },
+    {
+     "database": "PDB",
+     "id": "1AI0",
+     "link": "https://www.rcsb.org/structure/1AI0"
+    },
+    {
+     "database": "PDB",
+     "id": "1AIY",
+     "link": "https://www.rcsb.org/structure/1AIY"
+    },
+    {
+     "database": "PDB",
+     "id": "1B9E",
+     "link": "https://www.rcsb.org/structure/1B9E"
+    },
+    {
+     "database": "PDB",
+     "id": "1BEN",
+     "link": "https://www.rcsb.org/structure/1BEN"
+    },
+    {
+     "database": "PDB",
+     "id": "1EFE",
+     "link": "https://www.rcsb.org/structure/1EFE"
+    },
+    {
+     "database": "PDB",
+     "id": "1EV3",
+     "link": "https://www.rcsb.org/structure/1EV3"
+    },
+    {
+     "database": "PDB",
+     "id": "1EV6",
+     "link": "https://www.rcsb.org/structure/1EV6"
+    },
+    {
+     "database": "PDB",
+     "id": "1EVR",
+     "link": "https://www.rcsb.org/structure/1EVR"
+    },
+    {
+     "database": "PDB",
+     "id": "1FU2",
+     "link": "https://www.rcsb.org/structure/1FU2"
+    },
+    {
+     "database": "PDB",
+     "id": "1FUB",
+     "link": "https://www.rcsb.org/structure/1FUB"
+    },
+    {
+     "database": "PDB",
+     "id": "1G7A",
+     "link": "https://www.rcsb.org/structure/1G7A"
+    },
+    {
+     "database": "PDB",
+     "id": "1G7B",
+     "link": "https://www.rcsb.org/structure/1G7B"
+    },
+    {
+     "database": "PDB",
+     "id": "1GUJ",
+     "link": "https://www.rcsb.org/structure/1GUJ"
+    },
+    {
+     "database": "PDB",
+     "id": "1HIQ",
+     "link": "https://www.rcsb.org/structure/1HIQ"
+    },
+    {
+     "database": "PDB",
+     "id": "1HIS",
+     "link": "https://www.rcsb.org/structure/1HIS"
+    },
+    {
+     "database": "PDB",
+     "id": "1HIT",
+     "link": "https://www.rcsb.org/structure/1HIT"
+    },
+    {
+     "database": "PDB",
+     "id": "1HLS",
+     "link": "https://www.rcsb.org/structure/1HLS"
+    },
+    {
+     "database": "PDB",
+     "id": "1HTV",
+     "link": "https://www.rcsb.org/structure/1HTV"
+    },
+    {
+     "database": "PDB",
+     "id": "1HUI",
+     "link": "https://www.rcsb.org/structure/1HUI"
+    },
+    {
+     "database": "PDB",
+     "id": "1IOG",
+     "link": "https://www.rcsb.org/structure/1IOG"
+    },
+    {
+     "database": "PDB",
+     "id": "1IOH",
+     "link": "https://www.rcsb.org/structure/1IOH"
+    },
+    {
+     "database": "PDB",
+     "id": "1J73",
+     "link": "https://www.rcsb.org/structure/1J73"
+    },
+    {
+     "database": "PDB",
+     "id": "1JCA",
+     "link": "https://www.rcsb.org/structure/1JCA"
+    },
+    {
+     "database": "PDB",
+     "id": "1JCO",
+     "link": "https://www.rcsb.org/structure/1JCO"
+    },
+    {
+     "database": "PDB",
+     "id": "1JK8",
+     "link": "https://www.rcsb.org/structure/1JK8"
+    },
+    {
+     "database": "PDB",
+     "id": "1K3M",
+     "link": "https://www.rcsb.org/structure/1K3M"
+    },
+    {
+     "database": "PDB",
+     "id": "1KMF",
+     "link": "https://www.rcsb.org/structure/1KMF"
+    },
+    {
+     "database": "PDB",
+     "id": "1LKQ",
+     "link": "https://www.rcsb.org/structure/1LKQ"
+    },
+    {
+     "database": "PDB",
+     "id": "1LPH",
+     "link": "https://www.rcsb.org/structure/1LPH"
+    },
+    {
+     "database": "PDB",
+     "id": "1MHI",
+     "link": "https://www.rcsb.org/structure/1MHI"
+    },
+    {
+     "database": "PDB",
+     "id": "1MHJ",
+     "link": "https://www.rcsb.org/structure/1MHJ"
+    },
+    {
+     "database": "PDB",
+     "id": "1MSO",
+     "link": "https://www.rcsb.org/structure/1MSO"
+    },
+    {
+     "database": "PDB",
+     "id": "1OS3",
+     "link": "https://www.rcsb.org/structure/1OS3"
+    },
+    {
+     "database": "PDB",
+     "id": "1OS4",
+     "link": "https://www.rcsb.org/structure/1OS4"
+    },
+    {
+     "database": "PDB",
+     "id": "1Q4V",
+     "link": "https://www.rcsb.org/structure/1Q4V"
+    },
+    {
+     "database": "PDB",
+     "id": "1QIY",
+     "link": "https://www.rcsb.org/structure/1QIY"
+    },
+    {
+     "database": "PDB",
+     "id": "1QIZ",
+     "link": "https://www.rcsb.org/structure/1QIZ"
+    },
+    {
+     "database": "PDB",
+     "id": "1QJ0",
+     "link": "https://www.rcsb.org/structure/1QJ0"
+    },
+    {
+     "database": "PDB",
+     "id": "1RWE",
+     "link": "https://www.rcsb.org/structure/1RWE"
+    },
+    {
+     "database": "PDB",
+     "id": "1SF1",
+     "link": "https://www.rcsb.org/structure/1SF1"
+    },
+    {
+     "database": "PDB",
+     "id": "1SJT",
+     "link": "https://www.rcsb.org/structure/1SJT"
+    },
+    {
+     "database": "PDB",
+     "id": "1SJU",
+     "link": "https://www.rcsb.org/structure/1SJU"
+    },
+    {
+     "database": "PDB",
+     "id": "1T0C",
+     "link": "https://www.rcsb.org/structure/1T0C"
+    },
+    {
+     "database": "PDB",
+     "id": "1T1K",
+     "link": "https://www.rcsb.org/structure/1T1K"
+    },
+    {
+     "database": "PDB",
+     "id": "1T1P",
+     "link": "https://www.rcsb.org/structure/1T1P"
+    },
+    {
+     "database": "PDB",
+     "id": "1T1Q",
+     "link": "https://www.rcsb.org/structure/1T1Q"
+    },
+    {
+     "database": "PDB",
+     "id": "1TRZ",
+     "link": "https://www.rcsb.org/structure/1TRZ"
+    },
+    {
+     "database": "PDB",
+     "id": "1TYL",
+     "link": "https://www.rcsb.org/structure/1TYL"
+    },
+    {
+     "database": "PDB",
+     "id": "1TYM",
+     "link": "https://www.rcsb.org/structure/1TYM"
+    },
+    {
+     "database": "PDB",
+     "id": "1UZ9",
+     "link": "https://www.rcsb.org/structure/1UZ9"
+    },
+    {
+     "database": "PDB",
+     "id": "1VKT",
+     "link": "https://www.rcsb.org/structure/1VKT"
+    },
+    {
+     "database": "PDB",
+     "id": "1W8P",
+     "link": "https://www.rcsb.org/structure/1W8P"
+    },
+    {
+     "database": "PDB",
+     "id": "1XDA",
+     "link": "https://www.rcsb.org/structure/1XDA"
+    },
+    {
+     "database": "PDB",
+     "id": "1XGL",
+     "link": "https://www.rcsb.org/structure/1XGL"
+    },
+    {
+     "database": "PDB",
+     "id": "1XW7",
+     "link": "https://www.rcsb.org/structure/1XW7"
+    },
+    {
+     "database": "PDB",
+     "id": "1ZEG",
+     "link": "https://www.rcsb.org/structure/1ZEG"
+    },
+    {
+     "database": "PDB",
+     "id": "1ZEH",
+     "link": "https://www.rcsb.org/structure/1ZEH"
+    },
+    {
+     "database": "PDB",
+     "id": "1ZNJ",
+     "link": "https://www.rcsb.org/structure/1ZNJ"
+    },
+    {
+     "database": "PDB",
+     "id": "25HF",
+     "link": "https://www.rcsb.org/structure/25HF"
+    },
+    {
+     "database": "PDB",
+     "id": "25HL",
+     "link": "https://www.rcsb.org/structure/25HL"
+    },
+    {
+     "database": "PDB",
+     "id": "2AIY",
+     "link": "https://www.rcsb.org/structure/2AIY"
+    },
+    {
+     "database": "PDB",
+     "id": "2C8Q",
+     "link": "https://www.rcsb.org/structure/2C8Q"
+    },
+    {
+     "database": "PDB",
+     "id": "2C8R",
+     "link": "https://www.rcsb.org/structure/2C8R"
+    },
+    {
+     "database": "PDB",
+     "id": "2CEU",
+     "link": "https://www.rcsb.org/structure/2CEU"
+    },
+    {
+     "database": "PDB",
+     "id": "2G54",
+     "link": "https://www.rcsb.org/structure/2G54"
+    },
+    {
+     "database": "PDB",
+     "id": "2G56",
+     "link": "https://www.rcsb.org/structure/2G56"
+    },
+    {
+     "database": "PDB",
+     "id": "2H67",
+     "link": "https://www.rcsb.org/structure/2H67"
+    },
+    {
+     "database": "PDB",
+     "id": "2HH4",
+     "link": "https://www.rcsb.org/structure/2HH4"
+    },
+    {
+     "database": "PDB",
+     "id": "2HHO",
+     "link": "https://www.rcsb.org/structure/2HHO"
+    },
+    {
+     "database": "PDB",
+     "id": "2HIU",
+     "link": "https://www.rcsb.org/structure/2HIU"
+    },
+    {
+     "database": "PDB",
+     "id": "2JMN",
+     "link": "https://www.rcsb.org/structure/2JMN"
+    },
+    {
+     "database": "PDB",
+     "id": "2JUM",
+     "link": "https://www.rcsb.org/structure/2JUM"
+    },
+    {
+     "database": "PDB",
+     "id": "2JUU",
+     "link": "https://www.rcsb.org/structure/2JUU"
+    },
+    {
+     "database": "PDB",
+     "id": "2JUV",
+     "link": "https://www.rcsb.org/structure/2JUV"
+    },
+    {
+     "database": "PDB",
+     "id": "2JV1",
+     "link": "https://www.rcsb.org/structure/2JV1"
+    },
+    {
+     "database": "PDB",
+     "id": "2JZQ",
+     "link": "https://www.rcsb.org/structure/2JZQ"
+    },
+    {
+     "database": "PDB",
+     "id": "2K91",
+     "link": "https://www.rcsb.org/structure/2K91"
+    },
+    {
+     "database": "PDB",
+     "id": "2K9R",
+     "link": "https://www.rcsb.org/structure/2K9R"
+    },
+    {
+     "database": "PDB",
+     "id": "2KJJ",
+     "link": "https://www.rcsb.org/structure/2KJJ"
+    },
+    {
+     "database": "PDB",
+     "id": "2KJU",
+     "link": "https://www.rcsb.org/structure/2KJU"
+    },
+    {
+     "database": "PDB",
+     "id": "2KQP",
+     "link": "https://www.rcsb.org/structure/2KQP"
+    },
+    {
+     "database": "PDB",
+     "id": "2KQQ",
+     "link": "https://www.rcsb.org/structure/2KQQ"
+    },
+    {
+     "database": "PDB",
+     "id": "2KXK",
+     "link": "https://www.rcsb.org/structure/2KXK"
+    },
+    {
+     "database": "PDB",
+     "id": "2L1Y",
+     "link": "https://www.rcsb.org/structure/2L1Y"
+    },
+    {
+     "database": "PDB",
+     "id": "2L1Z",
+     "link": "https://www.rcsb.org/structure/2L1Z"
+    },
+    {
+     "database": "PDB",
+     "id": "2LGB",
+     "link": "https://www.rcsb.org/structure/2LGB"
+    },
+    {
+     "database": "PDB",
+     "id": "2LWZ",
+     "link": "https://www.rcsb.org/structure/2LWZ"
+    },
+    {
+     "database": "PDB",
+     "id": "2M1D",
+     "link": "https://www.rcsb.org/structure/2M1D"
+    },
+    {
+     "database": "PDB",
+     "id": "2M1E",
+     "link": "https://www.rcsb.org/structure/2M1E"
+    },
+    {
+     "database": "PDB",
+     "id": "2M2M",
+     "link": "https://www.rcsb.org/structure/2M2M"
+    },
+    {
+     "database": "PDB",
+     "id": "2M2N",
+     "link": "https://www.rcsb.org/structure/2M2N"
+    },
+    {
+     "database": "PDB",
+     "id": "2M2O",
+     "link": "https://www.rcsb.org/structure/2M2O"
+    },
+    {
+     "database": "PDB",
+     "id": "2M2P",
+     "link": "https://www.rcsb.org/structure/2M2P"
+    },
+    {
+     "database": "PDB",
+     "id": "2MLI",
+     "link": "https://www.rcsb.org/structure/2MLI"
+    },
+    {
+     "database": "PDB",
+     "id": "2MPG",
+     "link": "https://www.rcsb.org/structure/2MPG"
+    },
+    {
+     "database": "PDB",
+     "id": "2MPI",
+     "link": "https://www.rcsb.org/structure/2MPI"
+    },
+    {
+     "database": "PDB",
+     "id": "2MVC",
+     "link": "https://www.rcsb.org/structure/2MVC"
+    },
+    {
+     "database": "PDB",
+     "id": "2MVD",
+     "link": "https://www.rcsb.org/structure/2MVD"
+    },
+    {
+     "database": "PDB",
+     "id": "2N2V",
+     "link": "https://www.rcsb.org/structure/2N2V"
+    },
+    {
+     "database": "PDB",
+     "id": "2N2W",
+     "link": "https://www.rcsb.org/structure/2N2W"
+    },
+    {
+     "database": "PDB",
+     "id": "2N2X",
+     "link": "https://www.rcsb.org/structure/2N2X"
+    },
+    {
+     "database": "PDB",
+     "id": "2OLY",
+     "link": "https://www.rcsb.org/structure/2OLY"
+    },
+    {
+     "database": "PDB",
+     "id": "2OLZ",
+     "link": "https://www.rcsb.org/structure/2OLZ"
+    },
+    {
+     "database": "PDB",
+     "id": "2OM0",
+     "link": "https://www.rcsb.org/structure/2OM0"
+    },
+    {
+     "database": "PDB",
+     "id": "2OM1",
+     "link": "https://www.rcsb.org/structure/2OM1"
+    },
+    {
+     "database": "PDB",
+     "id": "2OMG",
+     "link": "https://www.rcsb.org/structure/2OMG"
+    },
+    {
+     "database": "PDB",
+     "id": "2OMH",
+     "link": "https://www.rcsb.org/structure/2OMH"
+    },
+    {
+     "database": "PDB",
+     "id": "2OMI",
+     "link": "https://www.rcsb.org/structure/2OMI"
+    },
+    {
+     "database": "PDB",
+     "id": "2OMQ",
+     "link": "https://www.rcsb.org/structure/2OMQ"
+    },
+    {
+     "database": "PDB",
+     "id": "2QIU",
+     "link": "https://www.rcsb.org/structure/2QIU"
+    },
+    {
+     "database": "PDB",
+     "id": "2R34",
+     "link": "https://www.rcsb.org/structure/2R34"
+    },
+    {
+     "database": "PDB",
+     "id": "2R35",
+     "link": "https://www.rcsb.org/structure/2R35"
+    },
+    {
+     "database": "PDB",
+     "id": "2R36",
+     "link": "https://www.rcsb.org/structure/2R36"
+    },
+    {
+     "database": "PDB",
+     "id": "2RN5",
+     "link": "https://www.rcsb.org/structure/2RN5"
+    },
+    {
+     "database": "PDB",
+     "id": "2VJZ",
+     "link": "https://www.rcsb.org/structure/2VJZ"
+    },
+    {
+     "database": "PDB",
+     "id": "2VK0",
+     "link": "https://www.rcsb.org/structure/2VK0"
+    },
+    {
+     "database": "PDB",
+     "id": "2W44",
+     "link": "https://www.rcsb.org/structure/2W44"
+    },
+    {
+     "database": "PDB",
+     "id": "2WBY",
+     "link": "https://www.rcsb.org/structure/2WBY"
+    },
+    {
+     "database": "PDB",
+     "id": "2WC0",
+     "link": "https://www.rcsb.org/structure/2WC0"
+    },
+    {
+     "database": "PDB",
+     "id": "2WRU",
+     "link": "https://www.rcsb.org/structure/2WRU"
+    },
+    {
+     "database": "PDB",
+     "id": "2WRV",
+     "link": "https://www.rcsb.org/structure/2WRV"
+    },
+    {
+     "database": "PDB",
+     "id": "2WRW",
+     "link": "https://www.rcsb.org/structure/2WRW"
+    },
+    {
+     "database": "PDB",
+     "id": "2WRX",
+     "link": "https://www.rcsb.org/structure/2WRX"
+    },
+    {
+     "database": "PDB",
+     "id": "2WS0",
+     "link": "https://www.rcsb.org/structure/2WS0"
+    },
+    {
+     "database": "PDB",
+     "id": "2WS1",
+     "link": "https://www.rcsb.org/structure/2WS1"
+    },
+    {
+     "database": "PDB",
+     "id": "2WS4",
+     "link": "https://www.rcsb.org/structure/2WS4"
+    },
+    {
+     "database": "PDB",
+     "id": "2WS6",
+     "link": "https://www.rcsb.org/structure/2WS6"
+    },
+    {
+     "database": "PDB",
+     "id": "2WS7",
+     "link": "https://www.rcsb.org/structure/2WS7"
+    },
+    {
+     "database": "PDB",
+     "id": "3AIY",
+     "link": "https://www.rcsb.org/structure/3AIY"
+    },
+    {
+     "database": "PDB",
+     "id": "3BXQ",
+     "link": "https://www.rcsb.org/structure/3BXQ"
+    },
+    {
+     "database": "PDB",
+     "id": "3E7Y",
+     "link": "https://www.rcsb.org/structure/3E7Y"
+    },
+    {
+     "database": "PDB",
+     "id": "3E7Z",
+     "link": "https://www.rcsb.org/structure/3E7Z"
+    },
+    {
+     "database": "PDB",
+     "id": "3EXX",
+     "link": "https://www.rcsb.org/structure/3EXX"
+    },
+    {
+     "database": "PDB",
+     "id": "3FQ9",
+     "link": "https://www.rcsb.org/structure/3FQ9"
+    },
+    {
+     "database": "PDB",
+     "id": "3HYD",
+     "link": "https://www.rcsb.org/structure/3HYD"
+    },
+    {
+     "database": "PDB",
+     "id": "3I3Z",
+     "link": "https://www.rcsb.org/structure/3I3Z"
+    },
+    {
+     "database": "PDB",
+     "id": "3I40",
+     "link": "https://www.rcsb.org/structure/3I40"
+    },
+    {
+     "database": "PDB",
+     "id": "3ILG",
+     "link": "https://www.rcsb.org/structure/3ILG"
+    },
+    {
+     "database": "PDB",
+     "id": "3INC",
+     "link": "https://www.rcsb.org/structure/3INC"
+    },
+    {
+     "database": "PDB",
+     "id": "3IR0",
+     "link": "https://www.rcsb.org/structure/3IR0"
+    },
+    {
+     "database": "PDB",
+     "id": "3JSD",
+     "link": "https://www.rcsb.org/structure/3JSD"
+    },
+    {
+     "database": "PDB",
+     "id": "3KQ6",
+     "link": "https://www.rcsb.org/structure/3KQ6"
+    },
+    {
+     "database": "PDB",
+     "id": "3P2X",
+     "link": "https://www.rcsb.org/structure/3P2X"
+    },
+    {
+     "database": "PDB",
+     "id": "3P33",
+     "link": "https://www.rcsb.org/structure/3P33"
+    },
+    {
+     "database": "PDB",
+     "id": "3Q6E",
+     "link": "https://www.rcsb.org/structure/3Q6E"
+    },
+    {
+     "database": "PDB",
+     "id": "3ROV",
+     "link": "https://www.rcsb.org/structure/3ROV"
+    },
+    {
+     "database": "PDB",
+     "id": "3TT8",
+     "link": "https://www.rcsb.org/structure/3TT8"
+    },
+    {
+     "database": "PDB",
+     "id": "3U4N",
+     "link": "https://www.rcsb.org/structure/3U4N"
+    },
+    {
+     "database": "PDB",
+     "id": "3UTQ",
+     "link": "https://www.rcsb.org/structure/3UTQ"
+    },
+    {
+     "database": "PDB",
+     "id": "3UTS",
+     "link": "https://www.rcsb.org/structure/3UTS"
+    },
+    {
+     "database": "PDB",
+     "id": "3UTT",
+     "link": "https://www.rcsb.org/structure/3UTT"
+    },
+    {
+     "database": "PDB",
+     "id": "3V19",
+     "link": "https://www.rcsb.org/structure/3V19"
+    },
+    {
+     "database": "PDB",
+     "id": "3V1G",
+     "link": "https://www.rcsb.org/structure/3V1G"
+    },
+    {
+     "database": "PDB",
+     "id": "3W11",
+     "link": "https://www.rcsb.org/structure/3W11"
+    },
+    {
+     "database": "PDB",
+     "id": "3W12",
+     "link": "https://www.rcsb.org/structure/3W12"
+    },
+    {
+     "database": "PDB",
+     "id": "3W13",
+     "link": "https://www.rcsb.org/structure/3W13"
+    },
+    {
+     "database": "PDB",
+     "id": "3W7Y",
+     "link": "https://www.rcsb.org/structure/3W7Y"
+    },
+    {
+     "database": "PDB",
+     "id": "3W7Z",
+     "link": "https://www.rcsb.org/structure/3W7Z"
+    },
+    {
+     "database": "PDB",
+     "id": "3W80",
+     "link": "https://www.rcsb.org/structure/3W80"
+    },
+    {
+     "database": "PDB",
+     "id": "3ZI3",
+     "link": "https://www.rcsb.org/structure/3ZI3"
+    },
+    {
+     "database": "PDB",
+     "id": "3ZQR",
+     "link": "https://www.rcsb.org/structure/3ZQR"
+    },
+    {
+     "database": "PDB",
+     "id": "3ZS2",
+     "link": "https://www.rcsb.org/structure/3ZS2"
+    },
+    {
+     "database": "PDB",
+     "id": "3ZU1",
+     "link": "https://www.rcsb.org/structure/3ZU1"
+    },
+    {
+     "database": "PDB",
+     "id": "4AIY",
+     "link": "https://www.rcsb.org/structure/4AIY"
+    },
+    {
+     "database": "PDB",
+     "id": "4AJX",
+     "link": "https://www.rcsb.org/structure/4AJX"
+    },
+    {
+     "database": "PDB",
+     "id": "4AJZ",
+     "link": "https://www.rcsb.org/structure/4AJZ"
+    },
+    {
+     "database": "PDB",
+     "id": "4AK0",
+     "link": "https://www.rcsb.org/structure/4AK0"
+    },
+    {
+     "database": "PDB",
+     "id": "4AKJ",
+     "link": "https://www.rcsb.org/structure/4AKJ"
+    },
+    {
+     "database": "PDB",
+     "id": "4CXL",
+     "link": "https://www.rcsb.org/structure/4CXL"
+    },
+    {
+     "database": "PDB",
+     "id": "4CXN",
+     "link": "https://www.rcsb.org/structure/4CXN"
+    },
+    {
+     "database": "PDB",
+     "id": "4CY7",
+     "link": "https://www.rcsb.org/structure/4CY7"
+    },
+    {
+     "database": "PDB",
+     "id": "4EFX",
+     "link": "https://www.rcsb.org/structure/4EFX"
+    },
+    {
+     "database": "PDB",
+     "id": "4EWW",
+     "link": "https://www.rcsb.org/structure/4EWW"
+    },
+    {
+     "database": "PDB",
+     "id": "4EWX",
+     "link": "https://www.rcsb.org/structure/4EWX"
+    },
+    {
+     "database": "PDB",
+     "id": "4EWZ",
+     "link": "https://www.rcsb.org/structure/4EWZ"
+    },
+    {
+     "database": "PDB",
+     "id": "4EX0",
+     "link": "https://www.rcsb.org/structure/4EX0"
+    },
+    {
+     "database": "PDB",
+     "id": "4EX1",
+     "link": "https://www.rcsb.org/structure/4EX1"
+    },
+    {
+     "database": "PDB",
+     "id": "4EXX",
+     "link": "https://www.rcsb.org/structure/4EXX"
+    },
+    {
+     "database": "PDB",
+     "id": "4EY1",
+     "link": "https://www.rcsb.org/structure/4EY1"
+    },
+    {
+     "database": "PDB",
+     "id": "4EY9",
+     "link": "https://www.rcsb.org/structure/4EY9"
+    },
+    {
+     "database": "PDB",
+     "id": "4EYD",
+     "link": "https://www.rcsb.org/structure/4EYD"
+    },
+    {
+     "database": "PDB",
+     "id": "4EYN",
+     "link": "https://www.rcsb.org/structure/4EYN"
+    },
+    {
+     "database": "PDB",
+     "id": "4EYP",
+     "link": "https://www.rcsb.org/structure/4EYP"
+    },
+    {
+     "database": "PDB",
+     "id": "4F0N",
+     "link": "https://www.rcsb.org/structure/4F0N"
+    },
+    {
+     "database": "PDB",
+     "id": "4F0O",
+     "link": "https://www.rcsb.org/structure/4F0O"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1A",
+     "link": "https://www.rcsb.org/structure/4F1A"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1B",
+     "link": "https://www.rcsb.org/structure/4F1B"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1C",
+     "link": "https://www.rcsb.org/structure/4F1C"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1D",
+     "link": "https://www.rcsb.org/structure/4F1D"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1F",
+     "link": "https://www.rcsb.org/structure/4F1F"
+    },
+    {
+     "database": "PDB",
+     "id": "4F1G",
+     "link": "https://www.rcsb.org/structure/4F1G"
+    },
+    {
+     "database": "PDB",
+     "id": "4F4T",
+     "link": "https://www.rcsb.org/structure/4F4T"
+    },
+    {
+     "database": "PDB",
+     "id": "4F4V",
+     "link": "https://www.rcsb.org/structure/4F4V"
+    },
+    {
+     "database": "PDB",
+     "id": "4F51",
+     "link": "https://www.rcsb.org/structure/4F51"
+    },
+    {
+     "database": "PDB",
+     "id": "4F8F",
+     "link": "https://www.rcsb.org/structure/4F8F"
+    },
+    {
+     "database": "PDB",
+     "id": "4FG3",
+     "link": "https://www.rcsb.org/structure/4FG3"
+    },
+    {
+     "database": "PDB",
+     "id": "4FKA",
+     "link": "https://www.rcsb.org/structure/4FKA"
+    },
+    {
+     "database": "PDB",
+     "id": "4GBC",
+     "link": "https://www.rcsb.org/structure/4GBC"
+    },
+    {
+     "database": "PDB",
+     "id": "4GBI",
+     "link": "https://www.rcsb.org/structure/4GBI"
+    },
+    {
+     "database": "PDB",
+     "id": "4GBK",
+     "link": "https://www.rcsb.org/structure/4GBK"
+    },
+    {
+     "database": "PDB",
+     "id": "4GBL",
+     "link": "https://www.rcsb.org/structure/4GBL"
+    },
+    {
+     "database": "PDB",
+     "id": "4GBN",
+     "link": "https://www.rcsb.org/structure/4GBN"
+    },
+    {
+     "database": "PDB",
+     "id": "4IUZ",
+     "link": "https://www.rcsb.org/structure/4IUZ"
+    },
+    {
+     "database": "PDB",
+     "id": "4IYD",
+     "link": "https://www.rcsb.org/structure/4IYD"
+    },
+    {
+     "database": "PDB",
+     "id": "4IYF",
+     "link": "https://www.rcsb.org/structure/4IYF"
+    },
+    {
+     "database": "PDB",
+     "id": "4NIB",
+     "link": "https://www.rcsb.org/structure/4NIB"
+    },
+    {
+     "database": "PDB",
+     "id": "4OGA",
+     "link": "https://www.rcsb.org/structure/4OGA"
+    },
+    {
+     "database": "PDB",
+     "id": "4P65",
+     "link": "https://www.rcsb.org/structure/4P65"
+    },
+    {
+     "database": "PDB",
+     "id": "4RXW",
+     "link": "https://www.rcsb.org/structure/4RXW"
+    },
+    {
+     "database": "PDB",
+     "id": "4UNE",
+     "link": "https://www.rcsb.org/structure/4UNE"
+    },
+    {
+     "database": "PDB",
+     "id": "4UNG",
+     "link": "https://www.rcsb.org/structure/4UNG"
+    },
+    {
+     "database": "PDB",
+     "id": "4UNH",
+     "link": "https://www.rcsb.org/structure/4UNH"
+    },
+    {
+     "database": "PDB",
+     "id": "4WDI",
+     "link": "https://www.rcsb.org/structure/4WDI"
+    },
+    {
+     "database": "PDB",
+     "id": "4XC4",
+     "link": "https://www.rcsb.org/structure/4XC4"
+    },
+    {
+     "database": "PDB",
+     "id": "4Y19",
+     "link": "https://www.rcsb.org/structure/4Y19"
+    },
+    {
+     "database": "PDB",
+     "id": "4Y1A",
+     "link": "https://www.rcsb.org/structure/4Y1A"
+    },
+    {
+     "database": "PDB",
+     "id": "4Z76",
+     "link": "https://www.rcsb.org/structure/4Z76"
+    },
+    {
+     "database": "PDB",
+     "id": "4Z77",
+     "link": "https://www.rcsb.org/structure/4Z77"
+    },
+    {
+     "database": "PDB",
+     "id": "4Z78",
+     "link": "https://www.rcsb.org/structure/4Z78"
+    },
+    {
+     "database": "PDB",
+     "id": "5AIY",
+     "link": "https://www.rcsb.org/structure/5AIY"
+    },
+    {
+     "database": "PDB",
+     "id": "5BOQ",
+     "link": "https://www.rcsb.org/structure/5BOQ"
+    },
+    {
+     "database": "PDB",
+     "id": "5BPO",
+     "link": "https://www.rcsb.org/structure/5BPO"
+    },
+    {
+     "database": "PDB",
+     "id": "5BQQ",
+     "link": "https://www.rcsb.org/structure/5BQQ"
+    },
+    {
+     "database": "PDB",
+     "id": "5BTS",
+     "link": "https://www.rcsb.org/structure/5BTS"
+    },
+    {
+     "database": "PDB",
+     "id": "5C0D",
+     "link": "https://www.rcsb.org/structure/5C0D"
+    },
+    {
+     "database": "PDB",
+     "id": "5CJO",
+     "link": "https://www.rcsb.org/structure/5CJO"
+    },
+    {
+     "database": "PDB",
+     "id": "5CNY",
+     "link": "https://www.rcsb.org/structure/5CNY"
+    },
+    {
+     "database": "PDB",
+     "id": "5CO2",
+     "link": "https://www.rcsb.org/structure/5CO2"
+    },
+    {
+     "database": "PDB",
+     "id": "5CO6",
+     "link": "https://www.rcsb.org/structure/5CO6"
+    },
+    {
+     "database": "PDB",
+     "id": "5CO9",
+     "link": "https://www.rcsb.org/structure/5CO9"
+    },
+    {
+     "database": "PDB",
+     "id": "5E7W",
+     "link": "https://www.rcsb.org/structure/5E7W"
+    },
+    {
+     "database": "PDB",
+     "id": "5EMS",
+     "link": "https://www.rcsb.org/structure/5EMS"
+    },
+    {
+     "database": "PDB",
+     "id": "5EN9",
+     "link": "https://www.rcsb.org/structure/5EN9"
+    },
+    {
+     "database": "PDB",
+     "id": "5ENA",
+     "link": "https://www.rcsb.org/structure/5ENA"
+    },
+    {
+     "database": "PDB",
+     "id": "5HPR",
+     "link": "https://www.rcsb.org/structure/5HPR"
+    },
+    {
+     "database": "PDB",
+     "id": "5HPU",
+     "link": "https://www.rcsb.org/structure/5HPU"
+    },
+    {
+     "database": "PDB",
+     "id": "5HQI",
+     "link": "https://www.rcsb.org/structure/5HQI"
+    },
+    {
+     "database": "PDB",
+     "id": "5HRQ",
+     "link": "https://www.rcsb.org/structure/5HRQ"
+    },
+    {
+     "database": "PDB",
+     "id": "5HYJ",
+     "link": "https://www.rcsb.org/structure/5HYJ"
+    },
+    {
+     "database": "PDB",
+     "id": "5MAM",
+     "link": "https://www.rcsb.org/structure/5MAM"
+    },
+    {
+     "database": "PDB",
+     "id": "5MHD",
+     "link": "https://www.rcsb.org/structure/5MHD"
+    },
+    {
+     "database": "PDB",
+     "id": "5MT3",
+     "link": "https://www.rcsb.org/structure/5MT3"
+    },
+    {
+     "database": "PDB",
+     "id": "5MT9",
+     "link": "https://www.rcsb.org/structure/5MT9"
+    },
+    {
+     "database": "PDB",
+     "id": "5MWQ",
+     "link": "https://www.rcsb.org/structure/5MWQ"
+    },
+    {
+     "database": "PDB",
+     "id": "5T7R",
+     "link": "https://www.rcsb.org/structure/5T7R"
+    },
+    {
+     "database": "PDB",
+     "id": "5UDP",
+     "link": "https://www.rcsb.org/structure/5UDP"
+    },
+    {
+     "database": "PDB",
+     "id": "5UOZ",
+     "link": "https://www.rcsb.org/structure/5UOZ"
+    },
+    {
+     "database": "PDB",
+     "id": "5UQA",
+     "link": "https://www.rcsb.org/structure/5UQA"
+    },
+    {
+     "database": "PDB",
+     "id": "5URT",
+     "link": "https://www.rcsb.org/structure/5URT"
+    },
+    {
+     "database": "PDB",
+     "id": "5URU",
+     "link": "https://www.rcsb.org/structure/5URU"
+    },
+    {
+     "database": "PDB",
+     "id": "5USP",
+     "link": "https://www.rcsb.org/structure/5USP"
+    },
+    {
+     "database": "PDB",
+     "id": "5USS",
+     "link": "https://www.rcsb.org/structure/5USS"
+    },
+    {
+     "database": "PDB",
+     "id": "5USV",
+     "link": "https://www.rcsb.org/structure/5USV"
+    },
+    {
+     "database": "PDB",
+     "id": "5UU2",
+     "link": "https://www.rcsb.org/structure/5UU2"
+    },
+    {
+     "database": "PDB",
+     "id": "5UU3",
+     "link": "https://www.rcsb.org/structure/5UU3"
+    },
+    {
+     "database": "PDB",
+     "id": "5UU4",
+     "link": "https://www.rcsb.org/structure/5UU4"
+    },
+    {
+     "database": "PDB",
+     "id": "5VIZ",
+     "link": "https://www.rcsb.org/structure/5VIZ"
+    },
+    {
+     "database": "PDB",
+     "id": "5WBT",
+     "link": "https://www.rcsb.org/structure/5WBT"
+    },
+    {
+     "database": "PDB",
+     "id": "5WDM",
+     "link": "https://www.rcsb.org/structure/5WDM"
+    },
+    {
+     "database": "PDB",
+     "id": "5WOB",
+     "link": "https://www.rcsb.org/structure/5WOB"
+    },
+    {
+     "database": "PDB",
+     "id": "6B3Q",
+     "link": "https://www.rcsb.org/structure/6B3Q"
+    },
+    {
+     "database": "PDB",
+     "id": "6B70",
+     "link": "https://www.rcsb.org/structure/6B70"
+    },
+    {
+     "database": "PDB",
+     "id": "6BFC",
+     "link": "https://www.rcsb.org/structure/6BFC"
+    },
+    {
+     "database": "PDB",
+     "id": "6CE7",
+     "link": "https://www.rcsb.org/structure/6CE7"
+    },
+    {
+     "database": "PDB",
+     "id": "6CE9",
+     "link": "https://www.rcsb.org/structure/6CE9"
+    },
+    {
+     "database": "PDB",
+     "id": "6CEB",
+     "link": "https://www.rcsb.org/structure/6CEB"
+    },
+    {
+     "database": "PDB",
+     "id": "6CK2",
+     "link": "https://www.rcsb.org/structure/6CK2"
+    },
+    {
+     "database": "PDB",
+     "id": "6GNQ",
+     "link": "https://www.rcsb.org/structure/6GNQ"
+    },
+    {
+     "database": "PDB",
+     "id": "6GV0",
+     "link": "https://www.rcsb.org/structure/6GV0"
+    },
+    {
+     "database": "PDB",
+     "id": "6H3M",
+     "link": "https://www.rcsb.org/structure/6H3M"
+    },
+    {
+     "database": "PDB",
+     "id": "6HN5",
+     "link": "https://www.rcsb.org/structure/6HN5"
+    },
+    {
+     "database": "PDB",
+     "id": "6JK8",
+     "link": "https://www.rcsb.org/structure/6JK8"
+    },
+    {
+     "database": "PDB",
+     "id": "6JR3",
+     "link": "https://www.rcsb.org/structure/6JR3"
+    },
+    {
+     "database": "PDB",
+     "id": "6K59",
+     "link": "https://www.rcsb.org/structure/6K59"
+    },
+    {
+     "database": "PDB",
+     "id": "6NWV",
+     "link": "https://www.rcsb.org/structure/6NWV"
+    },
+    {
+     "database": "PDB",
+     "id": "6O17",
+     "link": "https://www.rcsb.org/structure/6O17"
+    },
+    {
+     "database": "PDB",
+     "id": "6P4Z",
+     "link": "https://www.rcsb.org/structure/6P4Z"
+    },
+    {
+     "database": "PDB",
+     "id": "6S34",
+     "link": "https://www.rcsb.org/structure/6S34"
+    },
+    {
+     "database": "PDB",
+     "id": "6S4I",
+     "link": "https://www.rcsb.org/structure/6S4I"
+    },
+    {
+     "database": "PDB",
+     "id": "6S4J",
+     "link": "https://www.rcsb.org/structure/6S4J"
+    },
+    {
+     "database": "PDB",
+     "id": "6SOF",
+     "link": "https://www.rcsb.org/structure/6SOF"
+    },
+    {
+     "database": "PDB",
+     "id": "6TC2",
+     "link": "https://www.rcsb.org/structure/6TC2"
+    },
+    {
+     "database": "PDB",
+     "id": "6TYH",
+     "link": "https://www.rcsb.org/structure/6TYH"
+    },
+    {
+     "database": "PDB",
+     "id": "6U46",
+     "link": "https://www.rcsb.org/structure/6U46"
+    },
+    {
+     "database": "PDB",
+     "id": "6VEP",
+     "link": "https://www.rcsb.org/structure/6VEP"
+    },
+    {
+     "database": "PDB",
+     "id": "6VER",
+     "link": "https://www.rcsb.org/structure/6VER"
+    },
+    {
+     "database": "PDB",
+     "id": "6VES",
+     "link": "https://www.rcsb.org/structure/6VES"
+    },
+    {
+     "database": "PDB",
+     "id": "6VET",
+     "link": "https://www.rcsb.org/structure/6VET"
+    },
+    {
+     "database": "PDB",
+     "id": "6X4X",
+     "link": "https://www.rcsb.org/structure/6X4X"
+    },
+    {
+     "database": "PDB",
+     "id": "6Z7W",
+     "link": "https://www.rcsb.org/structure/6Z7W"
+    },
+    {
+     "database": "PDB",
+     "id": "6Z7Y",
+     "link": "https://www.rcsb.org/structure/6Z7Y"
+    },
+    {
+     "database": "PDB",
+     "id": "7BW7",
+     "link": "https://www.rcsb.org/structure/7BW7"
+    },
+    {
+     "database": "PDB",
+     "id": "7BW8",
+     "link": "https://www.rcsb.org/structure/7BW8"
+    },
+    {
+     "database": "PDB",
+     "id": "7BWA",
+     "link": "https://www.rcsb.org/structure/7BWA"
+    },
+    {
+     "database": "PDB",
+     "id": "7JP3",
+     "link": "https://www.rcsb.org/structure/7JP3"
+    },
+    {
+     "database": "PDB",
+     "id": "7KD6",
+     "link": "https://www.rcsb.org/structure/7KD6"
+    },
+    {
+     "database": "PDB",
+     "id": "7MD4",
+     "link": "https://www.rcsb.org/structure/7MD4"
+    },
+    {
+     "database": "PDB",
+     "id": "7MD5",
+     "link": "https://www.rcsb.org/structure/7MD5"
+    },
+    {
+     "database": "PDB",
+     "id": "7MQO",
+     "link": "https://www.rcsb.org/structure/7MQO"
+    },
+    {
+     "database": "PDB",
+     "id": "7MQR",
+     "link": "https://www.rcsb.org/structure/7MQR"
+    },
+    {
+     "database": "PDB",
+     "id": "7MQS",
+     "link": "https://www.rcsb.org/structure/7MQS"
+    },
+    {
+     "database": "PDB",
+     "id": "7NHU",
+     "link": "https://www.rcsb.org/structure/7NHU"
+    },
+    {
+     "database": "PDB",
+     "id": "7NMG",
+     "link": "https://www.rcsb.org/structure/7NMG"
+    },
+    {
+     "database": "PDB",
+     "id": "7PG0",
+     "link": "https://www.rcsb.org/structure/7PG0"
+    },
+    {
+     "database": "PDB",
+     "id": "7PG2",
+     "link": "https://www.rcsb.org/structure/7PG2"
+    },
+    {
+     "database": "PDB",
+     "id": "7PG3",
+     "link": "https://www.rcsb.org/structure/7PG3"
+    },
+    {
+     "database": "PDB",
+     "id": "7PG4",
+     "link": "https://www.rcsb.org/structure/7PG4"
+    },
+    {
+     "database": "PDB",
+     "id": "7QAC",
+     "link": "https://www.rcsb.org/structure/7QAC"
+    },
+    {
+     "database": "PDB",
+     "id": "7QGF",
+     "link": "https://www.rcsb.org/structure/7QGF"
+    },
+    {
+     "database": "PDB",
+     "id": "7QID",
+     "link": "https://www.rcsb.org/structure/7QID"
+    },
+    {
+     "database": "PDB",
+     "id": "7RKD",
+     "link": "https://www.rcsb.org/structure/7RKD"
+    },
+    {
+     "database": "PDB",
+     "id": "7RZE",
+     "link": "https://www.rcsb.org/structure/7RZE"
+    },
+    {
+     "database": "PDB",
+     "id": "7RZF",
+     "link": "https://www.rcsb.org/structure/7RZF"
+    },
+    {
+     "database": "PDB",
+     "id": "7RZI",
+     "link": "https://www.rcsb.org/structure/7RZI"
+    },
+    {
+     "database": "PDB",
+     "id": "7S4Y",
+     "link": "https://www.rcsb.org/structure/7S4Y"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL1",
+     "link": "https://www.rcsb.org/structure/7SL1"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL2",
+     "link": "https://www.rcsb.org/structure/7SL2"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL3",
+     "link": "https://www.rcsb.org/structure/7SL3"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL4",
+     "link": "https://www.rcsb.org/structure/7SL4"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL6",
+     "link": "https://www.rcsb.org/structure/7SL6"
+    },
+    {
+     "database": "PDB",
+     "id": "7SL7",
+     "link": "https://www.rcsb.org/structure/7SL7"
+    },
+    {
+     "database": "PDB",
+     "id": "7STH",
+     "link": "https://www.rcsb.org/structure/7STH"
+    },
+    {
+     "database": "PDB",
+     "id": "7STI",
+     "link": "https://www.rcsb.org/structure/7STI"
+    },
+    {
+     "database": "PDB",
+     "id": "7STJ",
+     "link": "https://www.rcsb.org/structure/7STJ"
+    },
+    {
+     "database": "PDB",
+     "id": "7STK",
+     "link": "https://www.rcsb.org/structure/7STK"
+    },
+    {
+     "database": "PDB",
+     "id": "7U6E",
+     "link": "https://www.rcsb.org/structure/7U6E"
+    },
+    {
+     "database": "PDB",
+     "id": "7V3P",
+     "link": "https://www.rcsb.org/structure/7V3P"
+    },
+    {
+     "database": "PDB",
+     "id": "7YQ3",
+     "link": "https://www.rcsb.org/structure/7YQ3"
+    },
+    {
+     "database": "PDB",
+     "id": "7YQ4",
+     "link": "https://www.rcsb.org/structure/7YQ4"
+    },
+    {
+     "database": "PDB",
+     "id": "7YQ5",
+     "link": "https://www.rcsb.org/structure/7YQ5"
+    },
+    {
+     "database": "PDB",
+     "id": "7Z5L",
+     "link": "https://www.rcsb.org/structure/7Z5L"
+    },
+    {
+     "database": "PDB",
+     "id": "7Z5Q",
+     "link": "https://www.rcsb.org/structure/7Z5Q"
+    },
+    {
+     "database": "PDB",
+     "id": "8EYX",
+     "link": "https://www.rcsb.org/structure/8EYX"
+    },
+    {
+     "database": "PDB",
+     "id": "8EYY",
+     "link": "https://www.rcsb.org/structure/8EYY"
+    },
+    {
+     "database": "PDB",
+     "id": "8EZ0",
+     "link": "https://www.rcsb.org/structure/8EZ0"
+    },
+    {
+     "database": "PDB",
+     "id": "8GSG",
+     "link": "https://www.rcsb.org/structure/8GSG"
+    },
+    {
+     "database": "PDB",
+     "id": "8GUY",
+     "link": "https://www.rcsb.org/structure/8GUY"
+    },
+    {
+     "database": "PDB",
+     "id": "8HGZ",
+     "link": "https://www.rcsb.org/structure/8HGZ"
+    },
+    {
+     "database": "PDB",
+     "id": "8HSF",
+     "link": "https://www.rcsb.org/structure/8HSF"
+    },
+    {
+     "database": "PDB",
+     "id": "8HSK",
+     "link": "https://www.rcsb.org/structure/8HSK"
+    },
+    {
+     "database": "PDB",
+     "id": "8IPZ",
+     "link": "https://www.rcsb.org/structure/8IPZ"
+    },
+    {
+     "database": "PDB",
+     "id": "8OKY",
+     "link": "https://www.rcsb.org/structure/8OKY"
+    },
+    {
+     "database": "PDB",
+     "id": "8ONI",
+     "link": "https://www.rcsb.org/structure/8ONI"
+    },
+    {
+     "database": "PDB",
+     "id": "8ONK",
+     "link": "https://www.rcsb.org/structure/8ONK"
+    },
+    {
+     "database": "PDB",
+     "id": "8ONP",
+     "link": "https://www.rcsb.org/structure/8ONP"
+    },
+    {
+     "database": "PDB",
+     "id": "8ONR",
+     "link": "https://www.rcsb.org/structure/8ONR"
+    },
+    {
+     "database": "PDB",
+     "id": "8PI4",
+     "link": "https://www.rcsb.org/structure/8PI4"
+    },
+    {
+     "database": "PDB",
+     "id": "8PI5",
+     "link": "https://www.rcsb.org/structure/8PI5"
+    },
+    {
+     "database": "PDB",
+     "id": "8PI6",
+     "link": "https://www.rcsb.org/structure/8PI6"
+    },
+    {
+     "database": "PDB",
+     "id": "8PJC",
+     "link": "https://www.rcsb.org/structure/8PJC"
+    },
+    {
+     "database": "PDB",
+     "id": "8PJH",
+     "link": "https://www.rcsb.org/structure/8PJH"
+    },
+    {
+     "database": "PDB",
+     "id": "8RRP",
+     "link": "https://www.rcsb.org/structure/8RRP"
+    },
+    {
+     "database": "PDB",
+     "id": "8RVT",
+     "link": "https://www.rcsb.org/structure/8RVT"
+    },
+    {
+     "database": "PDB",
+     "id": "8SBD",
+     "link": "https://www.rcsb.org/structure/8SBD"
+    },
+    {
+     "database": "PDB",
+     "id": "8VCX",
+     "link": "https://www.rcsb.org/structure/8VCX"
+    },
+    {
+     "database": "PDB",
+     "id": "8VDD",
+     "link": "https://www.rcsb.org/structure/8VDD"
+    },
+    {
+     "database": "PDB",
+     "id": "8WU0",
+     "link": "https://www.rcsb.org/structure/8WU0"
+    },
+    {
+     "database": "PDB",
+     "id": "8YYS",
+     "link": "https://www.rcsb.org/structure/8YYS"
+    },
+    {
+     "database": "PDB",
+     "id": "8Z4B",
+     "link": "https://www.rcsb.org/structure/8Z4B"
+    },
+    {
+     "database": "PDB",
+     "id": "9CIV",
+     "link": "https://www.rcsb.org/structure/9CIV"
+    },
+    {
+     "database": "PDB",
+     "id": "9DNN",
+     "link": "https://www.rcsb.org/structure/9DNN"
+    },
+    {
+     "database": "PDB",
+     "id": "9IBB",
+     "link": "https://www.rcsb.org/structure/9IBB"
+    },
+    {
+     "database": "PDB",
+     "id": "9LVC",
+     "link": "https://www.rcsb.org/structure/9LVC"
+    },
+    {
+     "database": "PDB",
+     "id": "9LVD",
+     "link": "https://www.rcsb.org/structure/9LVD"
+    },
+    {
+     "database": "PDB",
+     "id": "9LVE",
+     "link": "https://www.rcsb.org/structure/9LVE"
+    },
+    {
+     "database": "PDB",
+     "id": "9LVX",
+     "link": "https://www.rcsb.org/structure/9LVX"
+    },
+    {
+     "database": "PDB",
+     "id": "9LVY",
+     "link": "https://www.rcsb.org/structure/9LVY"
+    },
+    {
+     "database": "PDB",
+     "id": "9M4X",
+     "link": "https://www.rcsb.org/structure/9M4X"
+    },
+    {
+     "database": "PDB",
+     "id": "9M4Y",
+     "link": "https://www.rcsb.org/structure/9M4Y"
+    },
+    {
+     "database": "PDB",
+     "id": "9M4Z",
+     "link": "https://www.rcsb.org/structure/9M4Z"
+    },
+    {
+     "database": "PDB",
+     "id": "9M50",
+     "link": "https://www.rcsb.org/structure/9M50"
+    },
+    {
+     "database": "PDB",
+     "id": "9M51",
+     "link": "https://www.rcsb.org/structure/9M51"
+    },
+    {
+     "database": "PDB",
+     "id": "9PUW",
+     "link": "https://www.rcsb.org/structure/9PUW"
+    },
+    {
+     "database": "PDB",
+     "id": "9PVO",
+     "link": "https://www.rcsb.org/structure/9PVO"
+    },
+    {
+     "database": "PDB",
+     "id": "9QLD",
+     "link": "https://www.rcsb.org/structure/9QLD"
+    },
+    {
+     "database": "PDB",
+     "id": "9R48",
+     "link": "https://www.rcsb.org/structure/9R48"
+    },
+    {
+     "database": "PDB",
+     "id": "9R49",
+     "link": "https://www.rcsb.org/structure/9R49"
+    },
+    {
+     "database": "PDB",
+     "id": "9R4A",
+     "link": "https://www.rcsb.org/structure/9R4A"
+    },
+    {
+     "database": "PDB",
+     "id": "9R4B",
+     "link": "https://www.rcsb.org/structure/9R4B"
+    },
+    {
+     "database": "PDB",
+     "id": "9R4C",
+     "link": "https://www.rcsb.org/structure/9R4C"
+    },
+    {
+     "database": "PDB",
+     "id": "9R4E",
+     "link": "https://www.rcsb.org/structure/9R4E"
+    },
+    {
+     "database": "PDB",
+     "id": "9UTJ",
+     "link": "https://www.rcsb.org/structure/9UTJ"
+    },
+    {
+     "database": "PDB",
+     "id": "9UTK",
+     "link": "https://www.rcsb.org/structure/9UTK"
+    }
+   ]
+  }
+ },
+ "search_kegg_pathway": {
+  "INSULIN": [
+   {
+    "description": "KEGG Pathway",
+    "id": "map04910",
+    "link": "https://www.kegg.jp/pathway/map04910",
+    "name": "Insulin signaling pathway",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "KEGG",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "map04910",
+     "record_version": null,
+     "release": null,
+     "release_date": "2026-11-09",
+     "retrieved_at": "2026-11-11T20:39:56.463873+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:56.463873+00:00"
+   },
+   {
+    "description": "KEGG Pathway",
+    "id": "map04911",
+    "link": "https://www.kegg.jp/pathway/map04911",
+    "name": "Insulin secretion",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "KEGG",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "map04911",
+     "record_version": null,
+     "release": null,
+     "release_date": "2026-11-09",
+     "retrieved_at": "2026-11-11T20:39:56.463873+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:56.463873+00:00"
+   },
+   {
+    "description": "KEGG Pathway",
+    "id": "map04931",
+    "link": "https://www.kegg.jp/pathway/map04931",
+    "name": "Insulin resistance",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "KEGG",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "map04931",
+     "record_version": null,
+     "release": null,
+     "release_date": "2026-11-09",
+     "retrieved_at": "2026-11-11T20:39:56.463873+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:56.463873+00:00"
+   }
+  ]
+ },
+ "search_ncbi_gene": {
+  "INS": [
+   {
+    "description": "insulin",
+    "id": "3630",
+    "link": "https://www.ncbi.nlm.nih.gov/gene/3630",
+    "name": "INS",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "NCBI Gene",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "3630",
+     "record_version": null,
+     "release": "Build261109-2345m.1",
+     "release_date": "2026-11-10",
+     "retrieved_at": "2026-11-11T20:39:46.774627+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:46.774627+00:00",
+    "type": "protein-coding"
+   }
+  ],
+  "INSULIN": [
+   {
+    "description": "insulin",
+    "id": "3630",
+    "link": "https://www.ncbi.nlm.nih.gov/gene/3630",
+    "name": "INS",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "NCBI Gene",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "3630",
+     "record_version": null,
+     "release": "Build261109-2345m.1",
+     "release_date": "2026-11-10",
+     "retrieved_at": "2026-11-11T20:39:48.476346+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:48.476346+00:00",
+    "type": "protein-coding"
+   }
+  ]
+ },
+ "search_pdb_protein": {
+  "INSULIN": [
+   {
+    "description": "THREE-DIMENSIONAL STRUCTURE OF BOMBYXIN-II, AN INSULIN-RELATED BRAIN-SECRETORY PEPTIDE OF THE SILKMOTH BOMBYX MORI: COMPARISON WITH INSULIN AND RELAXIN",
+    "id": "1BOM",
+    "link": "https://www.rcsb.org/structure/1BOM",
+    "meta": "NMR · 1994",
+    "name": "PDB 1BOM",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "RCSB PDB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "1BOM",
+     "record_version": null,
+     "release": null,
+     "release_date": null,
+     "retrieved_at": "2026-11-11T20:39:51.587288+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:51.587288+00:00"
+   },
+   {
+    "description": "[D-ALAB26]-DES(B27-B30)-INSULIN-B26-AMIDE A SUPERPOTENT SINGLE-REPLACEMENT INSULIN ANALOGUE, NMR, MINIMIZED AVERAGE STRUCTURE",
+    "id": "1BZV",
+    "link": "https://www.rcsb.org/structure/1BZV",
+    "meta": "NMR · 1999",
+    "name": "PDB 1BZV",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "RCSB PDB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "1BZV",
+     "record_version": null,
+     "release": null,
+     "release_date": null,
+     "retrieved_at": "2026-11-11T20:39:51.587288+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:51.587288+00:00"
+   },
+   {
+    "description": "Solution structure of human relaxin-3",
+    "id": "2FHW",
+    "link": "https://www.rcsb.org/structure/2FHW",
+    "meta": "NMR · 2006",
+    "name": "PDB 2FHW",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "RCSB PDB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "2FHW",
+     "record_version": null,
+     "release": null,
+     "release_date": null,
+     "retrieved_at": "2026-11-11T20:39:51.587288+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:51.587288+00:00"
+   },
+   {
+    "description": "THREE-DIMENSIONAL STRUCTURE OF BOMBYXIN-II, AN INSULIN-RELATED BRAIN-SECRETORY PEPTIDE OF THE SILKMOTH BOMBYX MORI: COMPARISON WITH INSULIN AND RELAXIN",
+    "id": "1BON",
+    "link": "https://www.rcsb.org/structure/1BON",
+    "meta": "NMR · 1995",
+    "name": "PDB 1BON",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "RCSB PDB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "1BON",
+     "record_version": null,
+     "release": null,
+     "release_date": null,
+     "retrieved_at": "2026-11-11T20:39:51.587288+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:51.587288+00:00"
+   },
+   {
+    "description": "R3/I5 relaxin chimera",
+    "id": "2K1V",
+    "link": "https://www.rcsb.org/structure/2K1V",
+    "meta": "NMR · 2008",
+    "name": "PDB 2K1V",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "RCSB PDB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "2K1V",
+     "record_version": null,
+     "release": null,
+     "release_date": null,
+     "retrieved_at": "2026-11-11T20:39:51.587288+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:39:51.587288+00:00"
+   }
+  ]
+ },
+ "search_pubmed": {
+  "INS": [
+   {
+    "authors": "Mertens J et al.",
+    "doi": "10.1016/j.stem.2015.09.001",
+    "journal": "Cell Stem Cell",
+    "link": "https://pubmed.ncbi.nlm.nih.gov/26456686/",
+    "pmid": "26456686",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "PubMed",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "26456686",
+     "record_version": null,
+     "release": "Build-2026.11.11.08.09",
+     "release_date": "2026-11-11",
+     "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+    "title": "Directly Reprogrammed Human Neurons Retain Aging-Associated Transcriptomic Signatures and Reveal Age-Related Nucleocytoplasmic Defects",
+    "year": "2015"
+   },
+   {
+    "authors": "Herdy JR et al.",
+    "doi": "10.1016/j.stem.2022.11.010",
+    "journal": "Cell Stem Cell",
+    "link": "https://pubmed.ncbi.nlm.nih.gov/36459967/",
+    "pmid": "36459967",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "PubMed",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "36459967",
+     "record_version": null,
+     "release": "Build-2026.11.11.08.09",
+     "release_date": "2026-11-11",
+     "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+    "title": "Increased post-mitotic senescence in aged human neurons is a pathological feature of Alzheimer's disease",
+    "year": "2022"
+   },
+   {
+    "authors": "Lee S et al.",
+    "doi": "10.1126/sciadv.adj9600",
+    "journal": "Sci Adv",
+    "link": "https://pubmed.ncbi.nlm.nih.gov/38536932/",
+    "pmid": "38536932",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "PubMed",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "38536932",
+     "record_version": null,
+     "release": "Build-2026.11.11.08.09",
+     "release_date": "2026-11-11",
+     "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+    "title": "CRIF1 deficiency induces FOXP3(LOW) inflammatory non-suppressive regulatory T cells, thereby promoting antitumor immunity",
+    "year": "2024"
+   },
+   {
+    "authors": "van Tienhoven R et al.",
+    "doi": "10.1016/j.cell.2025.02.018",
+    "journal": "Cell",
+    "link": "https://pubmed.ncbi.nlm.nih.gov/40112799/",
+    "pmid": "40112799",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "PubMed",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "40112799",
+     "record_version": null,
+     "release": "Build-2026.11.11.08.09",
+     "release_date": "2026-11-11",
+     "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+    "title": "Genetic protection from type 1 diabetes resulting from accelerated insulin mRNA decay",
+    "year": "2025"
+   },
+   {
+    "authors": "Zhang H et al.",
+    "doi": "10.1016/j.neuropsychologia.2023.108732",
+    "journal": "Neuropsychologia",
+    "link": "https://pubmed.ncbi.nlm.nih.gov/37951386/",
+    "pmid": "37951386",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": null,
+     "database": "PubMed",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "37951386",
+     "record_version": null,
+     "release": "Build-2026.11.11.08.09",
+     "release_date": "2026-11-11",
+     "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+     "sequence_version": null
+    },
+    "retrieved_at": "2026-11-11T20:40:00.152366+00:00",
+    "title": "Interpersonal neural synchronization underlies mnemonic similarity during collaborative remembering",
+    "year": "2023"
+   }
+  ]
+ },
+ "search_uniprot_protein": {
+  "INSULIN": [
+   {
+    "description": "Insulin",
+    "id": "P01308",
+    "link": "https://www.uniprot.org/uniprotkb/P01308",
+    "name": "INS_HUMAN",
+    "organism": "Homo sapiens",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": "CRC64:C2C3B23B85E520E5",
+     "database": "UniProtKB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "P01308",
+     "record_version": "285",
+     "release": "2026_04",
+     "release_date": "2026-11-04",
+     "retrieved_at": "2026-11-11T20:39:49.962092+00:00",
+     "sequence_version": "1"
+    },
+    "retrieved_at": "2026-11-11T20:39:49.962092+00:00"
+   },
+   {
+    "description": "Insulin receptor",
+    "id": "P06213",
+    "link": "https://www.uniprot.org/uniprotkb/P06213",
+    "name": "INSR_HUMAN",
+    "organism": "Homo sapiens",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": "CRC64:709A955660739066",
+     "database": "UniProtKB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "P06213",
+     "record_version": "297",
+     "release": "2026_04",
+     "release_date": "2026-11-04",
+     "retrieved_at": "2026-11-11T20:39:49.962092+00:00",
+     "sequence_version": "4"
+    },
+    "retrieved_at": "2026-11-11T20:39:49.962092+00:00"
+   },
+   {
+    "description": "Insulin-degrading enzyme",
+    "id": "P14735",
+    "link": "https://www.uniprot.org/uniprotkb/P14735",
+    "name": "IDE_HUMAN",
+    "organism": "Homo sapiens",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": "CRC64:8A28AEF75EDA0EDA",
+     "database": "UniProtKB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "P14735",
+     "record_version": "236",
+     "release": "2026_04",
+     "release_date": "2026-11-04",
+     "retrieved_at": "2026-11-11T20:39:49.962092+00:00",
+     "sequence_version": "4"
+    },
+    "retrieved_at": "2026-11-11T20:39:49.962092+00:00"
+   },
+   {
+    "description": "Insulin",
+    "id": "P01317",
+    "link": "https://www.uniprot.org/uniprotkb/P01317",
+    "name": "INS_BOVIN",
+    "organism": "Bos taurus",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": "CRC64:75307CF78E61C06A",
+     "database": "UniProtKB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "P01317",
+     "record_version": "201",
+     "release": "2026_04",
+     "release_date": "2026-11-04",
+     "retrieved_at": "2026-11-11T20:39:49.962092+00:00",
+     "sequence_version": "2"
+    },
+    "retrieved_at": "2026-11-11T20:39:49.962092+00:00"
+   },
+   {
+    "description": "Insulin",
+    "id": "P01321",
+    "link": "https://www.uniprot.org/uniprotkb/P01321",
+    "name": "INS_CANLF",
+    "organism": "Canis lupus familiaris",
+    "provenance": {
+     "captured": "retrieval",
+     "checksum": "CRC64:A574791864A4FB98",
+     "database": "UniProtKB",
+     "helix": {
+      "commit": "300da27",
+      "name": "Helix",
+      "version": "0.1.1"
+     },
+     "record": "P01321",
+     "record_version": "158",
+     "release": "2026_04",
+     "release_date": "2026-11-04",
+     "retrieved_at": "2026-11-11T20:39:49.962092+00:00",
+     "sequence_version": "1"
+    },
+    "retrieved_at": "2026-11-11T20:39:49.962092+00:00"
+   }
+  ]
+ },
+ "source_release": {
+  "KEGG": {
+   "release": null,
+   "release_date": "2026-11-09"
+  },
+  "NCBI GENE": {
+   "release": "Build261109-2345m.1",
+   "release_date": "2026-11-10"
+  },
+  "PUBMED": {
+   "release": "Build-2026.11.11.08.09",
+   "release_date": "2026-11-11"
+  },
+  "UNIPROTKB": {
+   "release": "2026_04",
+   "release_date": "2026-11-04"
+  }
+ }
+}

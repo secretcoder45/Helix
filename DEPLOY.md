@@ -88,6 +88,11 @@ Against the live site, not localhost — expect the first request to be slow
 - Hard-refresh on `/batch` — must not 404 (handled by the rewrite in
   `vercel.json`)
 - `/validation` — shows the commit the backend is running
+- `<backend>/v1/upstream/stats` — retries against each source since the last
+  deploy; `{}` on a quiet day. Lots of `gave_up` for one host means that
+  source is struggling, not Helix
+- Account menu → **Download my data** saves a JSON file; **Delete account…**
+  (try it on a throwaway account) signs you out and the login stops working
 
 ## Configuration reference
 
@@ -112,6 +117,12 @@ random bearer tokens stored only as SHA-256 hashes, revoked on sign-out.
 Tools work signed out; projects, the methods export and share links need an
 account. Projects created before accounts existed have no owner and are
 hidden until assigned.
+
+People can download everything their account holds (`GET /v1/auth/export`,
+**Download my data** in the account menu) and delete the account with all
+its projects (`DELETE /v1/auth/account`, password required). Deletion is
+immediate and permanent: there is no soft-delete, and Neon's point-in-time
+restore is the only way back.
 
 Without email there is no self-service reset. Free Render instances have no
 shell, so run these from `biodb-backend/` on your own machine, pointed at the
@@ -148,6 +159,10 @@ fails if a model change is committed without its migration.
   as more than one instance.
 - **Sign-in throttling is per-process.** It moves to the shared cache if the
   backend ever runs as more than one instance.
+- **Unversioned API paths are deprecated.** The frontend uses `/v1`; the old
+  paths stay for scripts and browser tabs opened before the switch. Remove
+  them once logs show no traffic to them (look for responses without the
+  `/v1/` prefix).
 - **No password recovery or account deletion yet.** Resets go through
   `admin.py`; there is no email to send a reset link to.
 - **The Assistant is switched off.** Hidden in the interface and `/chat`

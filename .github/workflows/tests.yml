@@ -42,3 +42,37 @@ jobs:
           cache-dependency-path: biodb-frontend/package-lock.json
       - run: npm ci
       - run: npm run build
+
+  # The built frontend in a real browser, against the real backend with the
+  # source databases replaced by recordings (biodb-frontend/e2e/). Offline
+  # like the rest: the page is cut off from everything but the two servers.
+  browser:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: biodb-frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: biodb-backend/requirements.txt
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: biodb-frontend/package-lock.json
+      - run: pip install -r ../biodb-backend/requirements.txt
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Browser tests
+        run: npm run test:e2e
+        env:
+          E2E_PYTHON: python
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: biodb-frontend/playwright-report/
+          retention-days: 7

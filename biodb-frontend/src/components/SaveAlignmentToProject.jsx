@@ -110,6 +110,8 @@ export function SaveAlignmentToProject({ alignment }) {
                 />
                 <button
                   type="submit"
+                  aria-label="Create project and save"
+                  title="Create project and save"
                   disabled={busy || !newName.trim()}
                   className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg bg-accent text-accent-contrast transition-colors hover:bg-accent-hover disabled:opacity-40"
                 >

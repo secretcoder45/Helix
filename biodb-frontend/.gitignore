@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# Browser tests
+dist-e2e
+test-results
+playwright-report

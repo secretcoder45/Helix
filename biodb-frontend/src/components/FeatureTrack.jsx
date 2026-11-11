@@ -35,13 +35,8 @@ export function FeatureTrack({ features, length, onSelectRegion }) {
     return m
   }, [features])
 
-  const activeGroups = GROUPS.filter((g) => byGroup.get(g.id).length > 0)
-  if (!activeGroups.length) return null
-
-  const W = 1000
-  const height = activeGroups.length * (ROW_H + GAP) + AXIS_H
-  const x = (p) => GUTTER + ((p - 1) / Math.max(length - 1, 1)) * (W - GUTTER - 12)
-
+  // Before the early return below: hooks must run on every render, or a
+  // record with no features followed by one with features crashes.
   const ticks = useMemo(() => {
     const step = Math.pow(10, Math.floor(Math.log10(length / 4)))
     const s = length / step > 8 ? step * 2 : step
@@ -49,6 +44,13 @@ export function FeatureTrack({ features, length, onSelectRegion }) {
     for (let v = 0; v <= length; v += s) out.push(v)
     return out
   }, [length])
+
+  const activeGroups = GROUPS.filter((g) => byGroup.get(g.id).length > 0)
+  if (!activeGroups.length) return null
+
+  const W = 1000
+  const height = activeGroups.length * (ROW_H + GAP) + AXIS_H
+  const x = (p) => GUTTER + ((p - 1) / Math.max(length - 1, 1)) * (W - GUTTER - 12)
 
   const hovered = hover !== null ? features[hover] : null
 

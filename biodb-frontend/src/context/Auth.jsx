@@ -59,6 +59,13 @@ export function AuthProvider({ children }) {
     forget()
   }, [forget])
 
+  // The session is already gone server-side (the account was deleted): just
+  // forget it here, without a sign-out request that would only 401.
+  const endSession = useCallback(() => {
+    clearToken()
+    forget()
+  }, [forget])
+
   const value = useMemo(
     () => ({
       user: token ? me.data || null : null,
@@ -67,8 +74,9 @@ export function AuthProvider({ children }) {
       checking: Boolean(token) && me.isLoading,
       signedIn,
       signOut,
+      endSession,
     }),
-    [token, me.data, me.isLoading, signedIn, signOut],
+    [token, me.data, me.isLoading, signedIn, signOut, endSession],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
