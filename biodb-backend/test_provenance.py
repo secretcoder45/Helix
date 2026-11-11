@@ -323,3 +323,25 @@ def test_live_entity_carries_its_uniprot_release(client):
     assert re.fullmatch(r"\d{4}_\d{2}", p["release"]), p
     assert p["record"] == "P01308" and p["record_version"].isdigit()
     assert p["checksum"] == "CRC64:C2C3B23B85E520E5"
+
+
+def test_zenodo_metadata_agrees_with_the_citation_file():
+    """
+    Zenodo archives each release from .zenodo.json; GitHub's "Cite this
+    repository" reads CITATION.cff. They must describe the same thing — v0.1.0
+    was archived without a licence (and given Zenodo's default, CC-BY-4.0)
+    because nothing stated it explicitly.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    zen, cff = os.path.join(root, ".zenodo.json"), os.path.join(root, "CITATION.cff")
+    if not (os.path.exists(zen) and os.path.exists(cff)):
+        pytest.skip("not running from a full checkout")
+    z = json.load(open(zen))
+    text = open(cff).read()
+    field = lambda name: re.search(rf"^{name}:\s*['\"]?([^'\"\n]+)", text, re.M).group(1).strip()
+    assert z["license"].lower() == field("license").lower() == "mit"
+    assert z["title"] == field("title")
+    assert [c["name"] for c in z["creators"]] == re.findall(r"^\s+- name:\s*(.+)$", text, re.M)
+    assert z["upload_type"] == "software"
+    from version import HELIX_DOI
+    assert field("doi") == HELIX_DOI

@@ -1,0 +1,17 @@
+{
+  "title": "Helix: a unified bioinformatics workspace",
+  "upload_type": "software",
+  "description": "<p>Helix resolves a gene or protein across UniProtKB, NCBI Gene, RCSB PDB, KEGG and AlphaFold DB in one lookup, and provides pairwise alignment (Needleman–Wunsch, Smith–Waterman), phylogeny, protein and DNA analysis, restriction mapping and primer design. Saved results record the source database release, entry version and sequence checksum they came from, and projects export a methods section with references.</p><p>Web app: <a href=\"https://get-helix.vercel.app\">https://get-helix.vercel.app</a></p>",
+  "creators": [
+    { "name": "secretcoder45" }
+  ],
+  "license": "mit",
+  "keywords": ["bioinformatics", "sequence alignment", "UniProt", "reproducibility"],
+  "related_identifiers": [
+    {
+      "identifier": "https://get-helix.vercel.app",
+      "relation": "isDocumentedBy",
+      "resource_type": "other"
+    }
+  ]
+}

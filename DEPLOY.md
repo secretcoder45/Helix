@@ -89,7 +89,7 @@ Against the live site, not localhost — expect the first request to be slow
 | `LOG_LEVEL` | Render | no | Default `INFO`. Logs go to Render's log view |
 | `REDIS_URL` | Render | no | Shared cache (e.g. Render Key Value). Unset: in-process cache, right for one instance |
 | `ASSISTANT_ENABLED` | Render | no | `true` turns the Assistant (`/chat`) back on. Off by default: it spends the Anthropic key per question |
-| `HELIX_DOI` | Render | no | The Zenodo DOI once minted; methods exports then cite it |
+| `HELIX_DOI` | Render | no | Overrides the Zenodo DOI exports cite (default: Helix's concept DOI, `10.5281/zenodo.24134621`) |
 | `PORT` | Render | auto | Injected; the app binds to it |
 | `VITE_API_URL` | Vercel | yes | Baked in at build time, so changing it needs a rebuild |
 

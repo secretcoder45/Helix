@@ -16,11 +16,14 @@ import os
 import subprocess
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
-HELIX_VERSION = "0.1.0"
+HELIX_VERSION = "0.1.1"
 REPOSITORY_URL = "https://github.com/secretcoder45/Helix"
 
-# Set once a DOI is minted for a release (Zenodo), so exports can cite it.
-HELIX_DOI = os.getenv("HELIX_DOI") or None
+# Zenodo's concept DOI: it resolves to the latest archived release, so it
+# never needs changing when a new version is released. Exports cite it next
+# to the exact version and commit, which pin down the build. HELIX_DOI
+# overrides it (e.g. for a fork with its own archive).
+HELIX_DOI = os.getenv("HELIX_DOI") or "10.5281/zenodo.24134621"
 
 
 @functools.lru_cache(maxsize=1)

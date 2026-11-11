@@ -5,13 +5,18 @@ message: >-
   Methods export in Helix lists exactly which ones those are.
 title: "Helix: a unified bioinformatics workspace"
 type: software
-version: 0.1.0
+version: 0.1.1
 date-released: "2026-11-11"
 license: MIT
+doi: 10.5281/zenodo.24134621
 authors:
   - name: secretcoder45
 repository-code: "https://github.com/secretcoder45/Helix"
 url: "https://get-helix.vercel.app"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24134621
+    description: Concept DOI — resolves to the latest archived release
 abstract: >-
   Helix resolves a gene or protein across UniProtKB, NCBI Gene, RCSB PDB,
   KEGG and AlphaFold DB in one lookup, and provides pairwise alignment

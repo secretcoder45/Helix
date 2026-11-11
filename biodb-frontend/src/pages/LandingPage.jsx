@@ -797,6 +797,18 @@ function Footer() {
             For research use — not for diagnostic or clinical decisions. Data belongs to, and
             should be cited from, its source databases.
           </p>
+          <p className="m-0 mt-2 text-[12.5px] text-ink-3">
+            Cite Helix:{' '}
+            <a
+              href="https://doi.org/10.5281/zenodo.24134621"
+              target="_blank"
+              rel="noreferrer"
+              className="font-mono text-ink-2 hover:text-accent"
+            >
+              doi:10.5281/zenodo.24134621
+            </a>
+            {' '}· MIT licence
+          </p>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-ink-2">
           <Link to="/lookup" className="hover:text-ink">
