@@ -6,7 +6,8 @@ message: >-
 title: "Helix: a unified bioinformatics workspace"
 type: software
 version: 0.1.0
-date-released: "2026-10-12"
+date-released: "2026-11-11"
+license: MIT
 authors:
   - name: secretcoder45
 repository-code: "https://github.com/secretcoder45/Helix"
