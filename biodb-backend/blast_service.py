@@ -11,6 +11,10 @@ subset — the same tradeoff already made for every other integration here
 
 This module is a thin, stateless proxy: NCBI's RID *is* the job state, so
 nothing needs to be persisted locally between submit and results.
+
+Not routed through upstream.py's retries: a submit isn't safe to repeat (it
+would start a second search), the interface already polls status, and with
+NCBI's one-request-per-10-seconds limit every retry would cost 10 seconds.
 """
 
 import os

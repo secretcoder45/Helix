@@ -50,16 +50,16 @@ def test_max_hits_caps_results():
 
 
 def test_clean_sequence_strips_fasta_header():
-    import main
+    from routers.blast import clean_sequence
 
     raw = ">sp|P01308|INS_HUMAN Insulin\nMALWMR\nLLPLL"
-    assert main._clean_sequence(raw) == "MALWMRLLPLL"
+    assert clean_sequence(raw) == "MALWMRLLPLL"
 
 
 def test_clean_sequence_passes_through_bare_sequence():
-    import main
+    from routers.blast import clean_sequence
 
-    assert main._clean_sequence("MALWMRLLPLL") == "MALWMRLLPLL"
+    assert clean_sequence("MALWMRLLPLL") == "MALWMRLLPLL"
 
 
 def test_submit_rejects_short_sequence(client):

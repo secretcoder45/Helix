@@ -16,10 +16,21 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 import auth  # noqa: E402
+import upstream  # noqa: E402
 import ratelimit  # noqa: E402
 import main  # noqa: E402
 
 TEST_PASSWORD = "a long test passphrase"
+
+# Tests talk to the versioned API: a relative path like "/projects" goes to
+# /v1/projects. ROOT is for the few unversioned paths (/health, and the
+# backward-compatible aliases).
+ROOT = "http://testserver"
+V1 = f"{ROOT}/v1"
+
+
+def api_client(**kwargs):
+    return TestClient(main.app, base_url=V1, **kwargs)
 
 
 def register(client, username=None, password=TEST_PASSWORD):
@@ -38,19 +49,27 @@ def _reset_throttles():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _instant_retries(monkeypatch):
+    # Retries back off with real sleeps; the tests only care that they happen.
+    monkeypatch.setattr(upstream, "_sleep", lambda seconds: None)
+    upstream.reset_stats()
+    yield
+
+
 @pytest.fixture(scope="module")
 def anon_client():
     # The context-manager form runs the app's lifespan handler, which creates
     # the tables. A bare TestClient(app) would skip it and every query would
     # fail with "no such table".
-    with TestClient(main.app) as c:
+    with api_client() as c:
         yield c
 
 
 @pytest.fixture(scope="module")
 def client():
     """Signed in as a fresh user for the module — projects need an owner."""
-    with TestClient(main.app) as c:
+    with api_client() as c:
         ratelimit.clear_all()
         _, token = register(c)
         c.headers.update({"Authorization": f"Bearer {token}"})

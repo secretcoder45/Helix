@@ -8,13 +8,13 @@ gene lookup. Plain `def` routes run in a thread pool instead.
 """
 
 import ast
+import glob
 import os
 import threading
 import time
 
-from fastapi.testclient import TestClient
-
-import main
+from conftest import ROOT, api_client
+from database_apis import db_connector
 
 SLOW = 1.5
 
@@ -24,15 +24,15 @@ def test_a_slow_lookup_does_not_block_other_requests(monkeypatch):
         time.sleep(SLOW)
         return {}
 
-    monkeypatch.setattr(main.db_connector, "resolve_entity", slow_resolve)
+    monkeypatch.setattr(db_connector, "resolve_entity", slow_resolve)
 
-    with TestClient(main.app) as c:
+    with api_client() as c:
         worker = threading.Thread(target=lambda: c.get("/entity/BRCA1"))
         worker.start()
         time.sleep(0.2)  # let the slow request get going
 
         started = time.monotonic()
-        assert c.get("/health").status_code == 200
+        assert c.get(f"{ROOT}/health").status_code == 200
         waited = time.monotonic() - started
         worker.join()
 
@@ -44,7 +44,16 @@ def test_no_route_is_async():
     Static backstop for the test above, which exercises one route: no route
     handler may be `async def` unless it actually awaits something.
     """
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "main.py")
+    here = os.path.dirname(os.path.abspath(__file__))
+    paths = [os.path.join(here, "main.py"), *glob.glob(os.path.join(here, "routers", "*.py"))]
+    assert len(paths) > 2, "routers/ not found: this check would pass vacuously"
+    offenders = []
+    for path in paths:
+        offenders += _async_routes_that_never_await(path)
+    assert not offenders, f"async routes that never await (they block the event loop): {offenders}"
+
+
+def _async_routes_that_never_await(path):
     tree = ast.parse(open(path).read())
     offenders = []
     for node in tree.body:
@@ -56,5 +65,5 @@ def test_no_route_is_async():
         )
         awaits = any(isinstance(n, (ast.Await, ast.AsyncFor, ast.AsyncWith)) for n in ast.walk(node))
         if is_route and not awaits:
-            offenders.append(node.name)
-    assert not offenders, f"async routes that never await (they block the event loop): {offenders}"
+            offenders.append(f"{os.path.basename(path)}:{node.name}")
+    return offenders

@@ -6,6 +6,7 @@ import requests
 from datetime import datetime, timezone
 from typing import List, Dict
 
+import upstream
 from cache import cached
 import provenance as prov
 
@@ -132,7 +133,7 @@ class DatabaseConnector:
         name = prov.canonical(database)
         try:
             if name == "UniProtKB":
-                r = requests.get(
+                r = upstream.get(
                     DatabaseConnector.BASE_URLS["uniprot"],
                     params={"query": "accession:P38398", "fields": "accession", "size": 1, "format": "json"},
                     timeout=8,
@@ -142,11 +143,10 @@ class DatabaseConnector:
                 params = {"db": "gene" if name == "NCBI Gene" else "pubmed", "retmode": "json"}
                 if os.getenv("NCBI_API_KEY"):
                     params["api_key"] = os.getenv("NCBI_API_KEY")
-                _NCBI_LIMITER.acquire()
-                r = requests.get(f"{DatabaseConnector.BASE_URLS['ncbi']}/einfo.fcgi", params=params, timeout=8)
+                r = upstream.get(f"{DatabaseConnector.BASE_URLS['ncbi']}/einfo.fcgi", params=params, timeout=8, before=_NCBI_LIMITER.acquire)
                 return prov.ncbi_release(r.json()) if r.status_code == 200 else {}
             if name == "KEGG":
-                r = requests.get(f"{DatabaseConnector.BASE_URLS['kegg']}/info/pathway", timeout=8)
+                r = upstream.get(f"{DatabaseConnector.BASE_URLS['kegg']}/info/pathway", timeout=8)
                 return prov.kegg_release(r.text) if r.status_code == 200 else {}
         except Exception as e:
             # Metadata, not the result itself: a lookup shouldn't fail because
@@ -181,8 +181,7 @@ class DatabaseConnector:
             if api_key:
                 params["api_key"] = api_key
 
-            _NCBI_LIMITER.acquire()
-            response = requests.get(url, params=params, timeout=8)
+            response = upstream.get(url, params=params, timeout=8, before=_NCBI_LIMITER.acquire)
             if not _ok(response, "NCBI Gene"):
                 return []
 
@@ -201,8 +200,7 @@ class DatabaseConnector:
             if api_key:
                 summary_params["api_key"] = api_key
 
-            _NCBI_LIMITER.acquire()
-            summary_response = requests.get(summary_url, params=summary_params, timeout=8)
+            summary_response = upstream.get(summary_url, params=summary_params, timeout=8, before=_NCBI_LIMITER.acquire)
             if not _ok(summary_response, "NCBI Gene"):
                 return []
 
@@ -245,7 +243,7 @@ class DatabaseConnector:
                 "size": 5,
             }
 
-            response = requests.get(url, params=params, timeout=8)
+            response = upstream.get(url, params=params, timeout=8)
             if not _ok(response, "UniProt"):
                 return []
 
@@ -304,7 +302,7 @@ class DatabaseConnector:
             "rcsb_accession_info { initial_release_date } } }"
         )
         try:
-            r = requests.post(
+            r = upstream.post(
                 "https://data.rcsb.org/graphql",
                 json={"query": query, "variables": {"ids": identifiers}},
                 timeout=8,
@@ -350,7 +348,7 @@ class DatabaseConnector:
                 "return_type": "entry",
             }
 
-            response = requests.post(url, json=query_json, timeout=8)
+            response = upstream.post(url, json=query_json, timeout=8)
             if not _ok(response, "RCSB PDB"):
                 return []
 
@@ -389,7 +387,7 @@ class DatabaseConnector:
         """Search KEGG pathways"""
         try:
             url = f"https://rest.kegg.jp/find/pathway/{pathway_name}"
-            response = requests.get(url, timeout=8)
+            response = upstream.get(url, timeout=8)
 
             if not _ok(response, "KEGG") or not response.text.strip():
                 return []
@@ -442,8 +440,7 @@ class DatabaseConnector:
             if api_key:
                 search_params["api_key"] = api_key
 
-            _NCBI_LIMITER.acquire()
-            search_response = requests.get(search_url, params=search_params, timeout=10)
+            search_response = upstream.get(search_url, params=search_params, timeout=10, before=_NCBI_LIMITER.acquire)
             if not _ok(search_response, "PubMed"):
                 return []
 
@@ -456,8 +453,7 @@ class DatabaseConnector:
             if api_key:
                 summary_params["api_key"] = api_key
 
-            _NCBI_LIMITER.acquire()
-            summary_response = requests.get(summary_url, params=summary_params, timeout=10)
+            summary_response = upstream.get(summary_url, params=summary_params, timeout=10, before=_NCBI_LIMITER.acquire)
             if not _ok(summary_response, "PubMed"):
                 return []
 
@@ -513,7 +509,7 @@ class DatabaseConnector:
         guess.
         """
         try:
-            r = requests.get(
+            r = upstream.get(
                 f"https://rest.uniprot.org/uniprotkb/{accession}.json",
                 params={"fields": "ft_variant"},
                 timeout=12,
@@ -567,7 +563,7 @@ class DatabaseConnector:
         with the model rather than being dropped.
         """
         try:
-            r = requests.get(
+            r = upstream.get(
                 f"https://alphafold.ebi.ac.uk/api/prediction/{accession}", timeout=12
             )
             if not _ok(r, "AlphaFold DB"):
@@ -587,7 +583,7 @@ class DatabaseConnector:
             try:
                 doc = m.get("plddtDocUrl")
                 if doc:
-                    cr = requests.get(doc, timeout=12)
+                    cr = upstream.get(doc, timeout=12)
                     if cr.status_code == 200:
                         plddt = cr.json().get("confidenceScore", []) or []
             except Exception:
@@ -632,7 +628,7 @@ class DatabaseConnector:
         of a search plus ranking.
         """
         try:
-            response = requests.get(
+            response = upstream.get(
                 f"https://rest.uniprot.org/uniprotkb/{accession}.json",
                 params={
                     "fields": "accession,id,protein_name,organism_name,sequence,version,sequence_version"
@@ -740,7 +736,7 @@ class DatabaseConnector:
             entry = None
             release = {}
             for term in attempts:
-                response = requests.get(
+                response = upstream.get(
                     url,
                     # Several candidates, not one: picking from a set is what
                     # makes the choice stable and lets the scoring apply.

@@ -5,13 +5,15 @@ conftest.py so it's shared with test_blast.py.
 """
 
 import pytest
-import main
+from conftest import ROOT
+from database_apis import db_connector
+from routers import assistant, lookup
 
 
 def test_health(client):
     from version import HELIX_VERSION
 
-    assert client.get("/health").json() == {"status": "ok", "version": HELIX_VERSION}
+    assert client.get(f"{ROOT}/health").json() == {"status": "ok", "version": HELIX_VERSION, "api": "v1"}
 
 
 def test_project_lifecycle(client):
@@ -91,10 +93,10 @@ def test_missing_project_404s(client):
 def test_extract_search_terms_strips_question_words():
     # The bug this guards: full sentences returned zero hits from UniProt,
     # because its search API expects keywords, not natural language.
-    assert main._extract_search_terms("What does insulin do in the human body?") == "insulin human body"
-    assert main._extract_search_terms("Tell me about the BRCA1 gene") == "brca1 gene"
+    assert assistant.extract_search_terms("What does insulin do in the human body?") == "insulin human body"
+    assert assistant.extract_search_terms("Tell me about the BRCA1 gene") == "brca1 gene"
     # A query that is already keywords passes through unchanged
-    assert main._extract_search_terms("insulin") == "insulin"
+    assert assistant.extract_search_terms("insulin") == "insulin"
 
 
 @pytest.mark.network
@@ -180,10 +182,9 @@ def test_canonical_symbols_resolve_to_reviewed_human_entries(
 def test_batch_parses_mixed_delimiters_and_dedupes(client, monkeypatch):
     # Parsing and ordering are pure logic; stub the network so this stays a
     # fast offline test.
-    import main
 
     monkeypatch.setattr(
-        main.db_connector,
+        db_connector,
         "resolve_entity",
         lambda q: {
             "accession": f"ACC-{q}",
@@ -208,12 +209,11 @@ def test_batch_parses_mixed_delimiters_and_dedupes(client, monkeypatch):
         "resolved": 4,
         "unresolved": 0,
         "truncated": False,
-        "max_batch": main.MAX_BATCH,
+        "max_batch": lookup.MAX_BATCH,
     }
 
 
 def test_batch_reports_failures_per_row_without_failing_the_batch(client, monkeypatch):
-    import main
 
     def flaky(q):
         if q == "BOOM":
@@ -230,7 +230,7 @@ def test_batch_reports_failures_per_row_without_failing_the_batch(client, monkey
             "links": {},
         }
 
-    monkeypatch.setattr(main.db_connector, "resolve_entity", flaky)
+    monkeypatch.setattr(db_connector, "resolve_entity", flaky)
 
     res = client.post("/batch", json={"identifiers": ["OK1", "BOOM", "MISSING"]}).json()
     by_query = {r["query"]: r for r in res["rows"]}
@@ -414,10 +414,9 @@ def test_alphafold_404s_for_unknown_accession(client):
 
 def test_assistant_is_off_unless_enabled(anon_client, monkeypatch):
     """It spends a paid API key per question, so it must not answer by default."""
-    import main
 
     called = []
-    monkeypatch.setattr(main.llm, "answer_query", lambda *a, **k: called.append(1) or "answer")
+    monkeypatch.setattr(assistant.llm, "answer_query", lambda *a, **k: called.append(1) or "answer")
     monkeypatch.delenv("ASSISTANT_ENABLED", raising=False)
     assert anon_client.post("/chat", json={"query": "what is insulin"}).status_code == 404
     assert called == []
@@ -425,15 +424,14 @@ def test_assistant_is_off_unless_enabled(anon_client, monkeypatch):
 
 def test_databases_lists_only_searchable_categories(anon_client, monkeypatch):
     """Every listed category must return results from a source it names."""
-    import main
 
     listed = anon_client.get("/databases").json()
     assert set(listed) == {"all", "genomics", "proteins", "pathways"}
     fake = [{"id": "1", "name": "x", "description": "d", "link": "l"}]
     for fn in ("search_ncbi_gene", "search_uniprot_protein", "search_pdb_protein", "search_kegg_pathway"):
-        monkeypatch.setattr(main.db_connector, fn, lambda q, fake=fake: fake)
+        monkeypatch.setattr(db_connector, fn, lambda q, fake=fake: fake)
     for key, meta in listed.items():
-        rows, unavailable = main._run_search(key, "insulin")
+        rows, unavailable = lookup.run_search(key, "insulin")
         assert rows and not unavailable, key
         sources = {"UniProt" if r["database"] == "UniProt" else r["database"] for r in rows}
         named = {"PDB" if a == "RCSB PDB" else a for a in meta["apis"]}

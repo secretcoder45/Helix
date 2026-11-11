@@ -12,10 +12,10 @@ import secrets
 
 import pytest
 import requests
-from fastapi.testclient import TestClient
 
 import database_apis
-import main
+from conftest import api_client
+from routers import lookup
 import ratelimit
 from database_apis import SourceUnavailable, db_connector
 
@@ -142,7 +142,7 @@ def test_an_unexpected_crash_is_a_clean_500_with_a_reference(monkeypatch):
         raise RuntimeError("bug")
 
     monkeypatch.setattr(db_connector, "resolve_entity", crash)
-    with TestClient(main.app, raise_server_exceptions=False) as c:
+    with api_client(raise_server_exceptions=False) as c:
         res = c.get("/entity/INS", headers={"Origin": "http://localhost:5173"})
     assert res.status_code == 500
     body = res.json()
@@ -169,7 +169,7 @@ def test_compute_endpoints_are_rate_limited_per_client(anon_client):
 
 
 def test_batch_has_its_own_tighter_budget(anon_client, monkeypatch):
-    monkeypatch.setattr(main, "_batch_row", lambda ident, include_gene: {"query": ident, "resolved": False})
+    monkeypatch.setattr(lookup, "batch_row", lambda ident, include_gene: {"query": ident, "resolved": False})
     here = {"X-Forwarded-For": "198.51.100.30"}
     for _ in range(ratelimit.BATCHES.limit):
         assert anon_client.post("/batch", json={"identifiers": ["INS"]}, headers=here).status_code == 200
