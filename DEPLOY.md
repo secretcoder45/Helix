@@ -48,34 +48,46 @@ someone else — the first request will look like it's hanging.
 
 ## 4. Frontend → Vercel
 
-```bash
-cd biodb-frontend
-npx vercel login
-npx vercel link
-npx vercel env add VITE_API_URL production   # paste the Render URL from step 3
-npx vercel --prod
-```
+The Vercel project (`helix-bio-db`) is connected to the GitHub repo, so
+**every push to `main` deploys the frontend** — nothing to run by hand.
+Settings that make that work, in the Vercel dashboard:
 
-Copy the URL it prints, e.g. `https://helix.vercel.app`.
+- **Root Directory:** `biodb-frontend` (the repo root has no frontend; with
+  `.` every Git deploy fails)
+- **Production Branch:** `main`
+- **Domains:** `get-helix.vercel.app` assigned to Production, so each new
+  production deploy gets it automatically. `biodb-frontend.vercel.app`
+  308-redirects to it (the backend's CORS only allows get-helix).
+- **Environment variable:** `VITE_API_URL` = the Render URL, for Production.
+
+Setting it up from scratch: create the project, set the above, then
+`npx vercel env add VITE_API_URL production`. A manual deploy is still
+possible from `biodb-frontend/` with `npx vercel --prod`, but then the domain
+has to be re-pointed with `npx vercel alias set <deployment-url>
+get-helix.vercel.app`.
 
 ## 5. Close the CORS loop
 
-Back in the Render dashboard, edit the `ALLOWED_ORIGINS` env var to your
-Vercel URL. Render redeploys automatically on env var changes.
+Back in the Render dashboard, set `ALLOWED_ORIGINS` to
+`https://get-helix.vercel.app`. Render redeploys automatically on env var
+changes.
 
 ## 6. Smoke test
 
 Against the live site, not localhost — expect the first request to be slow
 (cold start) if the backend had been idle:
 
-- `/` — cross-reference `BRCA1`; expect P38398, 1863 aa, 33 structures
+- `/` — the landing page; its status line should reach "Server ready"
+- `/lookup?q=BRCA1` — expect P38398, 1863 aa, and a provenance line naming
+  the UniProt release
+- `/db/all?q=insulin` — four columns (UniProt, PDB, NCBI Gene, KEGG)
 - `/batch` — "Use sample", Resolve; expect 8/8 resolved
-- `/chat` — ask anything; a reply means the Anthropic key is set
-- `/projects` — create one, save a record into it
+- `/signin` — create an account; then `/projects` — create one, save a record
 - Reload `/projects` after a few minutes — the saved record must persist
   (confirms Neon Postgres is actually wired up, not a fresh local file)
 - Hard-refresh on `/batch` — must not 404 (handled by the rewrite in
   `vercel.json`)
+- `/validation` — shows the commit the backend is running
 
 ## Configuration reference
 

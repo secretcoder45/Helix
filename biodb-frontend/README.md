@@ -1,16 +1,28 @@
-# React + Vite
+# Helix — frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React 19 + Vite workspace and landing page for [Helix](../README.md).
 
-Currently, two official plugins are available:
+```bash
+npm install
+echo "VITE_API_URL=http://localhost:8000" > .env   # the backend; see ../biodb-backend
+npm run dev                                        # http://localhost:5173
+npm run build                                      # production build into dist/
+npm run lint                                       # oxlint
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Where things are:
 
-## React Compiler
+| | |
+|---|---|
+| `src/pages/LandingPage.jsx` | The landing page — in the main bundle, no backend dependency |
+| `src/app/Workspace.jsx` | Everything behind it, loaded as a separate chunk; each tool page is its own chunk |
+| `src/lib/nav.js` | The workspace navigation, read by the sidebar, phone menu and command palette |
+| `src/lib/api.js` | Backend calls (React Query hooks) |
+| `src/components/ui.jsx` | Shared UI primitives |
+| `src/index.css` | Design tokens (light and dark) |
+| `vercel.json` | SPA rewrite, security headers including the Content-Security-Policy |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Pushes to `main` deploy to [get-helix.vercel.app](https://get-helix.vercel.app)
+automatically (see `../DEPLOY.md`). If you load a new external resource — a
+script, font, image host or API — add its origin to the CSP in `vercel.json`,
+or the browser will block it in production only.
